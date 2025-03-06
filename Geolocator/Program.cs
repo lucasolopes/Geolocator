@@ -1,6 +1,11 @@
+using Geolocator.Configurations;
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.ConfigureDbContext();
+
+builder.Services.ConfigureCors();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -8,6 +13,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
+
+app.UseCors("AllowLocalhostAndZero");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -22,4 +29,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

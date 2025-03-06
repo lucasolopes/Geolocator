@@ -4,3 +4,31 @@ services:
     build:
       context: .
       dockerfile: Geolocator/Dockerfile
+    ports:
+     - "3001:8081"
+     - "3000:8080" 
+    depends_on:
+     - postgres15
+    networks:
+     - geolocator-network
+
+  postgres15:
+    image: postgres:15
+    container_name: postgres15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: geolocator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+    networks:
+      - geolocator-network
+
+volumes:
+ postgres_data:
+ 
+networks:
+  geolocator-network:
+    driver: bridge
