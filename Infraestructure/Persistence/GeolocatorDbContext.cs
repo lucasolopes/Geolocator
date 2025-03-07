@@ -12,6 +12,7 @@ public class GeolocatorDbContext(DbContextOptions<GeolocatorDbContext> options) 
     public DbSet<Municipality> Municipalities { get; set; }
     public DbSet<Region> Regions { get; set; }
     public DbSet<State> States { get; set; }
+    public DbSet<SubDistricts> SubDistricts { get; set; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
