@@ -15,7 +15,7 @@ builder.Services.AddQuartzJobs();
 
 builder.Services.AddElasticsearch(builder.Configuration);
 
-builder.Services.ConfigureServices();
+builder.Services.ConfigureServices(builder.Configuration);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
