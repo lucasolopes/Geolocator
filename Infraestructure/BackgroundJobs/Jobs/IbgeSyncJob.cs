@@ -1,4 +1,5 @@
 ﻿
+using Application.Commands.ElasticsearchSync;
 using Application.Commands.IbgeSync;
 using Domain.Entities;
 using MediatR;
@@ -59,8 +60,14 @@ public class IbgeSyncJob : IJob
             _logger.LogInformation("Iniciando sincronização de subdistritos");
             await _mediator.Send(new SyncSubDistrictsCommand());
             _logger.LogInformation("Sincronização de subdistritos concluída");
+            
+            // Agora sincroniza com o Elasticsearch
+            _logger.LogInformation("Iniciando sincronização com o Elasticsearch");
+            SyncElasticsearchResult elasticsearchResult = await _mediator.Send(new SyncElasticsearchCommand());
+            _logger.LogInformation("Sincronização com o Elasticsearch concluída. Resultado: {Result}", 
+                elasticsearchResult.Success ? "Sucesso" : "Falha parcial");
                 
-            _logger.LogInformation("Sincronização IBGE concluída com sucesso.");
+            _logger.LogInformation("Sincronização IBGE e Elasticsearch concluída com sucesso.");
         }
         catch (Exception ex)
         {

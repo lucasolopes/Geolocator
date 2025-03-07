@@ -1,0 +1,418 @@
+﻿using Application.Interfaces.Search;
+using Domain.Entities;
+using Elasticsearch.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Nest;
+
+namespace Elasticsearch.Services;
+
+public class ElasticsearchService : IElasticsearchService
+{
+    private readonly IElasticClient _elasticClient;
+    private readonly ILogger<ElasticsearchService> _logger;
+    private readonly ElasticsearchOptions _options;
+
+    public ElasticsearchService(
+        IElasticClient elasticClient,
+        IOptions<ElasticsearchOptions> options,
+        ILogger<ElasticsearchService> logger)
+    {
+        _elasticClient = elasticClient;
+        _options = options.Value;
+        _logger = logger;
+    }
+
+    public async Task CreateIndicesIfNotExistAsync()
+    {
+        _logger.LogInformation("Verificando se os índices do Elasticsearch existem");
+
+        await CreateIndexIfNotExists<Region>(_options.RegionIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Keyword(k => k.Name(n => n.Initials))
+            ));
+
+        await CreateIndexIfNotExists<State>(_options.StateIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Keyword(k => k.Name(n => n.Initials))
+                .Number(n => n.Name(n => n.RegionId).Type(NumberType.Integer))
+            ));
+
+        await CreateIndexIfNotExists<Mesoregion>(_options.MesoregionIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Number(n => n.Name(n => n.StateId).Type(NumberType.Integer))
+            ));
+
+        await CreateIndexIfNotExists<MicroRegion>(_options.MicroRegionIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Number(n => n.Name(n => n.MesoregionId).Type(NumberType.Integer))
+            ));
+
+        await CreateIndexIfNotExists<Municipality>(_options.MunicipalityIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Number(n => n.Name(n => n.MicroRegionId).Type(NumberType.Integer))
+            ));
+
+        await CreateIndexIfNotExists<Districts>(_options.DistrictIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Number(n => n.Name(n => n.MunicipalityId).Type(NumberType.Integer))
+            ));
+
+        await CreateIndexIfNotExists<SubDistricts>(_options.SubDistrictIndexName, r => r
+            .Properties(p => p
+                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
+                .Number(n => n.Name(n => n.DistrictId).Type(NumberType.Integer))
+            ));
+
+        _logger.LogInformation("Verificação e criação de índices concluída");
+    }
+
+    public async Task<bool> IndexRegionsAsync(IEnumerable<Region> regions)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.RegionIndexName)
+                .IndexMany(regions)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar regiões: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar regiões");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexStatesAsync(IEnumerable<State> states)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.StateIndexName)
+                .IndexMany(states)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar estados: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar estados");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexMesoregionsAsync(IEnumerable<Mesoregion> mesoregions)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.MesoregionIndexName)
+                .IndexMany(mesoregions)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar mesorregiões: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar mesorregiões");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexMicroRegionsAsync(IEnumerable<MicroRegion> microRegions)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.MicroRegionIndexName)
+                .IndexMany(microRegions)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar microrregiões: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar microrregiões");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexMunicipalitiesAsync(IEnumerable<Municipality> municipalities)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.MunicipalityIndexName)
+                .IndexMany(municipalities)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar municípios: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar municípios");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexDistrictsAsync(IEnumerable<Districts> districts)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.DistrictIndexName)
+                .IndexMany(districts)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar distritos: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar distritos");
+            return false;
+        }
+    }
+
+    public async Task<bool> IndexSubDistrictsAsync(IEnumerable<SubDistricts> subDistricts)
+    {
+        try
+        {
+            BulkResponse? bulkResponse = await _elasticClient.BulkAsync(b => b
+                .Index(_options.SubDistrictIndexName)
+                .IndexMany(subDistricts)
+            );
+
+            if (bulkResponse.Errors)
+            {
+                _logger.LogError("Erro ao indexar subdistritos: {Error}", bulkResponse.DebugInformation);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao indexar subdistritos");
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<Region>> SearchRegionsByNameAsync(string searchTerm, int page = 1, int pageSize = 10)
+    {
+        ISearchResponse<Region>? response = await _elasticClient.SearchAsync<Region>(s => s
+            .Index(_options.RegionIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .MultiMatch(m => m
+                    .Fields(f => f
+                        .Field(ff => ff.Name, 2.0)
+                        .Field(ff => ff.Initials)
+                    )
+                    .Query(searchTerm)
+                    .Type(TextQueryType.BestFields)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<Region>();
+    }
+
+    public async Task<IEnumerable<State>> SearchStatesByNameAsync(string searchTerm, int page = 1, int pageSize = 10)
+    {
+        ISearchResponse<State>? response = await _elasticClient.SearchAsync<State>(s => s
+            .Index(_options.StateIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .MultiMatch(m => m
+                    .Fields(f => f
+                        .Field(ff => ff.Name, 2.0)
+                        .Field(ff => ff.Initials)
+                    )
+                    .Query(searchTerm)
+                    .Type(TextQueryType.BestFields)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<State>();
+    }
+
+    public async Task<IEnumerable<Mesoregion>> SearchMesoregionsByNameAsync(string searchTerm, int page = 1,
+        int pageSize = 10)
+    {
+        ISearchResponse<Mesoregion>? response = await _elasticClient.SearchAsync<Mesoregion>(s => s
+            .Index(_options.MesoregionIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .Match(m => m
+                    .Field(f => f.Name)
+                    .Query(searchTerm)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<Mesoregion>();
+    }
+
+    public async Task<IEnumerable<MicroRegion>> SearchMicroRegionsByNameAsync(string searchTerm, int page = 1,
+        int pageSize = 10)
+    {
+        ISearchResponse<MicroRegion>? response = await _elasticClient.SearchAsync<MicroRegion>(s => s
+            .Index(_options.MicroRegionIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .Match(m => m
+                    .Field(f => f.Name)
+                    .Query(searchTerm)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<MicroRegion>();
+    }
+
+    public async Task<IEnumerable<Municipality>> SearchMunicipalitiesByNameAsync(string searchTerm, int page = 1,
+        int pageSize = 10)
+    {
+        ISearchResponse<Municipality>? response = await _elasticClient.SearchAsync<Municipality>(s => s
+            .Index(_options.MunicipalityIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .Match(m => m
+                    .Field(f => f.Name)
+                    .Query(searchTerm)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<Municipality>();
+    }
+
+    public async Task<IEnumerable<Districts>> SearchDistrictsByNameAsync(string searchTerm, int page = 1,
+        int pageSize = 10)
+    {
+        ISearchResponse<Districts>? response = await _elasticClient.SearchAsync<Districts>(s => s
+            .Index(_options.DistrictIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .Match(m => m
+                    .Field(f => f.Name)
+                    .Query(searchTerm)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<Districts>();
+    }
+
+    public async Task<IEnumerable<SubDistricts>> SearchSubDistrictsByNameAsync(string searchTerm, int page = 1,
+        int pageSize = 10)
+    {
+        ISearchResponse<SubDistricts>? response = await _elasticClient.SearchAsync<SubDistricts>(s => s
+            .Index(_options.SubDistrictIndexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => q
+                .Match(m => m
+                    .Field(f => f.Name)
+                    .Query(searchTerm)
+                    .Fuzziness(Fuzziness.Auto)
+                )
+            )
+        );
+
+        return response.IsValid ? response.Documents : Enumerable.Empty<SubDistricts>();
+    }
+
+    private async Task CreateIndexIfNotExists<T>(string indexName,
+        Func<TypeMappingDescriptor<T>, ITypeMapping> mappingSelector) where T : class
+    {
+        ExistsResponse indexExists = await _elasticClient.Indices.ExistsAsync(indexName);
+        if (!indexExists.Exists)
+        {
+            _logger.LogInformation("Criando índice {IndexName}", indexName);
+
+            CreateIndexResponse? createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+                .Settings(s => s
+                    .Analysis(a => a
+                        .Analyzers(aa => aa
+                            .Custom("brazilian", ca => ca
+                                .Tokenizer("standard")
+                                .Filters("lowercase", "brazilian_stemmer", "asciifolding")
+                            )
+                        )
+                        .TokenFilters(tf => tf
+                            .Stemmer("brazilian_stemmer", st => st
+                                .Language("brazilian")
+                            )
+                        )
+                    )
+                )
+                .Map(mappingSelector)
+            );
+
+            if (!createIndexResponse.IsValid)
+            {
+                _logger.LogError("Erro ao criar índice {IndexName}: {Error}",
+                    indexName, createIndexResponse.DebugInformation);
+                throw new Exception($"Falha ao criar índice {indexName}: {createIndexResponse.DebugInformation}");
+            }
+        }
+    }
+}

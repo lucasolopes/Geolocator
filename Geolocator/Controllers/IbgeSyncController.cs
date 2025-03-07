@@ -1,4 +1,5 @@
-﻿using Application.Commands.IbgeSync;
+﻿using Application.Commands.ElasticsearchSync;
+using Application.Commands.IbgeSync;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,8 +9,8 @@ namespace Geolocator.Controllers;
 [Route("api/ibge")]
 public class IbgeSyncController : ControllerBase
 {
-    private readonly IMediator _mediator;
     private readonly ILogger<IbgeSyncController> _logger;
+    private readonly IMediator _mediator;
 
     public IbgeSyncController(IMediator mediator, ILogger<IbgeSyncController> logger)
     {
@@ -26,28 +27,49 @@ public class IbgeSyncController : ControllerBase
 
             // Sincroniza regiões
             await _mediator.Send(new SyncRegionsCommand());
-            
+
             // Sincroniza estados
             await _mediator.Send(new SyncStatesCommand());
-            
+
             // Sincroniza mesorregiões
             await _mediator.Send(new SyncMesoregionsCommand());
-            
+
             // Sincroniza microrregiões
             await _mediator.Send(new SyncMicroregionsCommand());
-            
+
             // Sincroniza municípios
             await _mediator.Send(new SyncMunicipalitiesCommand());
-            
+
             // Sincroniza distritos
             await _mediator.Send(new SyncDistrictsCommand());
-            
+
             // Sincroniza subdistritos
             await _mediator.Send(new SyncSubDistrictsCommand());
 
-            _logger.LogInformation("Sincronização manual concluída com sucesso");
-            
-            return Ok(new { message = "Sincronização dos dados do IBGE concluída com sucesso" });
+            _logger.LogInformation(
+                "Sincronização manual do IBGE concluída com sucesso. Sincronizando com Elasticsearch...");
+
+            // Sincroniza com o Elasticsearch
+            SyncElasticsearchResult elasticsearchResult = await _mediator.Send(new SyncElasticsearchCommand());
+
+            return Ok(new
+            {
+                message = "Sincronização dos dados do IBGE e Elasticsearch concluída com sucesso",
+                elasticsearchSync = new
+                {
+                    success = elasticsearchResult.Success,
+                    details = new
+                    {
+                        regionsIndexed = elasticsearchResult.RegionsIndexed,
+                        statesIndexed = elasticsearchResult.StatesIndexed,
+                        mesoregionsIndexed = elasticsearchResult.MesoregionsIndexed,
+                        microRegionsIndexed = elasticsearchResult.MicroRegionsIndexed,
+                        municipalitiesIndexed = elasticsearchResult.MunicipalitiesIndexed,
+                        districtsIndexed = elasticsearchResult.DistrictsIndexed,
+                        subDistrictsIndexed = elasticsearchResult.SubDistrictsIndexed
+                    }
+                }
+            });
         }
         catch (Exception ex)
         {

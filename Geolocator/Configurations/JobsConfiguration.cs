@@ -11,14 +11,15 @@ public static class JobsConfiguration
         {
             q.UseMicrosoftDependencyInjectionJobFactory();
 
-            var jobKey = new JobKey("IbgeSyncJob");
-            q.AddJob<IbgeSyncJob>(opts => opts.WithIdentity(jobKey));
+            // Job para sincronização com o IBGE e Elasticsearch
+            var ibgeJobKey = new JobKey("IbgeSyncJob");
+            q.AddJob<IbgeSyncJob>(opts => opts.WithIdentity(ibgeJobKey));
 
             q.AddTrigger(opts => opts
-                .ForJob(jobKey)
+                .ForJob(ibgeJobKey)
                 .WithIdentity("IbgeSyncTrigger")
                 .StartNow()
-                .WithCronSchedule("0 0 1 1 *"));
+                .WithCronSchedule("0 0 1 1 * ?")); // Executar às 00:00 do primeiro dia de cada mês
         });
 
         services.AddQuartzHostedService(options =>

@@ -1,3 +1,5 @@
+using Application.Interfaces.Search;
+using Elasticsearch.Extensions;
 using Geolocator.Configurations;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
@@ -10,6 +12,8 @@ builder.Services.ConfigureDbContext();
 builder.Services.ConfigureCors();
 
 builder.Services.AddQuartzJobs();
+
+builder.Services.AddElasticsearch(builder.Configuration);
 
 builder.Services.ConfigureServices();
 
@@ -37,8 +41,21 @@ app.MapControllers();
 
 using (IServiceScope scope = app.Services.CreateScope())
 {
-    GeolocatorDbContext db = scope.ServiceProvider.GetRequiredService<GeolocatorDbContext>();
-    await db.Database.MigrateAsync();
+    try
+    {
+        // Migra o banco de dados PostgreSQL
+        GeolocatorDbContext db = scope.ServiceProvider.GetRequiredService<GeolocatorDbContext>();
+        await db.Database.MigrateAsync();
+
+        // Inicializa os índices do Elasticsearch
+        IElasticsearchService elasticService = scope.ServiceProvider.GetRequiredService<Application.Interfaces.Search.IElasticsearchService>();
+        await elasticService.CreateIndicesIfNotExistAsync();
+    }
+    catch (Exception ex)
+    {
+        ILogger<Program> logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ocorreu um erro durante a inicialização da aplicação");
+    }
 }
 
 await app.RunAsync();

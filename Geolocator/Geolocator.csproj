@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Infraestructure\BackgroundJobs\BackgroundJobs.csproj" />
+    <ProjectReference Include="..\Infraestructure\Elasticsearch\Elasticsearch.csproj" />
     <ProjectReference Include="..\Infraestructure\ExternalServices\ExternalServices.csproj" />
     <ProjectReference Include="..\Infraestructure\Persistence\Persistence.csproj" />
   </ItemGroup>
