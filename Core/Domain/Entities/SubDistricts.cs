@@ -8,5 +8,11 @@ public class SubDistricts
 
     //Relationships
     public Districts District = null!;
-    
+
+    public SubDistricts(int itemId, string itemNome, string toString)
+    {
+        Id = itemId;
+        Name = itemNome;
+        DistrictId = toString;
+    }
 }

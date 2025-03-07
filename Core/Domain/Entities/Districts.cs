@@ -9,4 +9,11 @@ public class Districts
     //Relationships
     public List<SubDistricts> SubDistricts = new List<SubDistricts>();
     public Municipality Municipality = null!;
+
+    public Districts(int itemId, string itemNome, int municipalityId)
+    {
+        Id = itemId;
+        Name = itemNome;
+        MunicipalityId = municipalityId;
+    }
 }

@@ -10,4 +10,12 @@ public class State
     //Relationships
     public List<Mesoregion> Mesoregions = new List<Mesoregion>();
     public Region Region = null!;
+
+    public State(int itemId, string itemNome, string itemSigla, int regiaoId)
+    {
+        Id = itemId;
+        Name = itemNome;
+        Initials = itemSigla;
+        RegionId = regiaoId;
+    }
 }
