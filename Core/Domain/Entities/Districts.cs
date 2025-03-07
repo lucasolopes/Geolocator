@@ -7,5 +7,6 @@ public class Districts
     public int MunicipalityId { get; private set; }
 
     //Relationships
+    public List<SubDistricts> SubDistricts = new List<SubDistricts>();
     public Municipality Municipality = null!;
 }
