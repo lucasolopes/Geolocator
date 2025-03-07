@@ -8,7 +8,4 @@ public interface IRepository<T> where T : class
     IUnitOfWork UnitOfWork { get; }
 }
 
-public interface IUnitOfWork
-{
-    Task<int> SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default);
-}
+

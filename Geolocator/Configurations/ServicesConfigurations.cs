@@ -15,6 +15,12 @@ public static class ServiceConfiguration
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.AddDebug();
+        });
+
         services.AddHttpClient();
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(

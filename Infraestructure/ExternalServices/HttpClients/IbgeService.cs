@@ -3,6 +3,7 @@ using System.Text.Json;
 using Application.DTOs;
 using Application.Interfaces.Services;
 using Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace ExternalServices.HttpClients;
 
@@ -10,12 +11,12 @@ public class IbgeService : IIbgeService
 {
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
-    //private readonly ILogger<IbgeService> _logger;
+    private readonly ILogger<IbgeService> _logger;
 
-    public IbgeService(HttpClient httpClient)
+    public IbgeService(HttpClient httpClient, ILogger<IbgeService> logger)
     {
         _httpClient = httpClient;
-      //  _logger = logger;
+        _logger = logger;
 
         _httpClient.BaseAddress = new Uri("https://servicodados.ibge.gov.br/api/v1/");
 
@@ -30,86 +31,91 @@ public class IbgeService : IIbgeService
         try
         {
             List<IbgeRegionDto>? response = await _httpClient.GetFromJsonAsync<List<IbgeRegionDto>>(
-                "localidades/regioes", 
+                "localidades/regioes",
                 _jsonOptions);
-                
+
             return response ?? new List<IbgeRegionDto>();
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Erro ao buscar Regioes do IBGE");
             throw;
         }
     }
 
     public async Task<List<State>> GetStatesAsync()
-    {/*
-        try
-        {
-            List<IbgeStateDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeStateDto>>("localidades/estados", _jsonOptions);
-
-            if (response == null)
+    {
+        /*
+            try
             {
-                return new List<State>();
-            }
+                List<IbgeStateDto>? response =
+                    await _httpClient.GetFromJsonAsync<List<IbgeStateDto>>("localidades/estados", _jsonOptions);
 
-            var states = new List<State>();
-            foreach (IbgeStateDto item in response)
-            {
-                // Implementação similar à de regiões
-                var state = new State
+                if (response == null)
                 {
-                    // Id = item.Id,
-                    // Name = item.Nome,
-                    // Initials = item.Sigla,
-                    // RegionId = item.Regiao.Id
-                };
+                    return new List<State>();
+                }
 
-                states.Add(state);
+                var states = new List<State>();
+                foreach (IbgeStateDto item in response)
+                {
+                    // Implementação similar à de regiões
+                    var state = new State
+                    {
+                        // Id = item.Id,
+                        // Name = item.Nome,
+                        // Initials = item.Sigla,
+                        // RegionId = item.Regiao.Id
+                    };
+
+                    states.Add(state);
+                }
+
+                return states;
             }
-
-            return states;
-        }
-        catch (Exception ex)
-        {
-          //  _logger.LogError(ex, "Erro ao buscar estados do IBGE");
-            throw;
-        }*/throw new NotImplementedException();
+            catch (Exception ex)
+            {
+              //  _logger.LogError(ex, "Erro ao buscar estados do IBGE");
+                throw;
+            }*/
+        throw new NotImplementedException();
     }
 
     public async Task<List<Mesoregion>> GetMesoregionsAsync(int stateId)
-    {/*
-        try
-        {
-            List<IbgeMesoregionDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeMesoregionDto>>(
-                    $"localidades/estados/{stateId}/mesorregioes", _jsonOptions);
-
-            if (response == null)
+    {
+        /*
+            try
             {
-                return new List<Mesoregion>();
-            }
+                List<IbgeMesoregionDto>? response =
+                    await _httpClient.GetFromJsonAsync<List<IbgeMesoregionDto>>(
+                        $"localidades/estados/{stateId}/mesorregioes", _jsonOptions);
 
-            var mesoregions = new List<Mesoregion>();
-            foreach (IbgeMesoregionDto item in response)
-            {
-                var mesoregion = new Mesoregion
+                if (response == null)
                 {
-                    // Id = item.Id,
-                    // Name = item.Nome,
-                    // StateId = stateId
-                };
+                    return new List<Mesoregion>();
+                }
 
-                mesoregions.Add(mesoregion);
+                var mesoregions = new List<Mesoregion>();
+                foreach (IbgeMesoregionDto item in response)
+                {
+                    var mesoregion = new Mesoregion
+                    {
+                        // Id = item.Id,
+                        // Name = item.Nome,
+                        // StateId = stateId
+                    };
+
+                    mesoregions.Add(mesoregion);
+                }
+
+                return mesoregions;
             }
-
-            return mesoregions;
-        }
-        catch (Exception ex)
-        {
-            //_logger.LogError(ex, "Erro ao buscar mesorregiões do IBGE para o estado {StateId}", stateId);
-            throw;
-        }*/throw new NotImplementedException();
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Erro ao buscar mesorregiões do IBGE para o estado {StateId}", stateId);
+                throw;
+            }*/
+        throw new NotImplementedException();
     }
 
     public async Task<List<MicroRegion>> GetMicroregionsAsync(int mesoregionId)
@@ -150,114 +156,116 @@ public class IbgeService : IIbgeService
     }
 
     public async Task<List<Municipality>> GetMunicipalitiesAsync(int microregionId)
-    {/*
-        try
-        {
-            List<IbgeMunicipalityDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeMunicipalityDto>>(
-                    $"localidades/microrregioes/{microregionId}/municipios", _jsonOptions);
-
-            if (response == null)
+    {
+        /*
+            try
             {
-                return new List<Municipality>();
-            }
+                List<IbgeMunicipalityDto>? response =
+                    await _httpClient.GetFromJsonAsync<List<IbgeMunicipalityDto>>(
+                        $"localidades/microrregioes/{microregionId}/municipios", _jsonOptions);
 
-            var municipalities = new List<Municipality>();
-            foreach (IbgeMunicipalityDto item in response)
-            {
-                var municipality = new Municipality
+                if (response == null)
                 {
-                    // Id = item.Id,
-                    // Name = item.Nome,
-                    // MicroRegionId = microregionId
-                };
+                    return new List<Municipality>();
+                }
 
-                municipalities.Add(municipality);
+                var municipalities = new List<Municipality>();
+                foreach (IbgeMunicipalityDto item in response)
+                {
+                    var municipality = new Municipality
+                    {
+                        // Id = item.Id,
+                        // Name = item.Nome,
+                        // MicroRegionId = microregionId
+                    };
+
+                    municipalities.Add(municipality);
+                }
+
+                return municipalities;
             }
-
-            return municipalities;
-        }
-        catch (Exception ex)
-        {
-           // _logger.LogError(ex, "Erro ao buscar municípios do IBGE para a microrregião {MicroregionId}",microregionId);
-            throw;
-        }*/
+            catch (Exception ex)
+            {
+               // _logger.LogError(ex, "Erro ao buscar municípios do IBGE para a microrregião {MicroregionId}",microregionId);
+                throw;
+            }*/
         throw new NotImplementedException();
     }
 
     public async Task<List<Districts>> GetDistrictsAsync(int municipalityId)
-    {/*
-        try
-        {
-            List<IbgeDistrictDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeDistrictDto>>(
-                    $"localidades/municipios/{municipalityId}/distritos", _jsonOptions);
-
-            if (response == null)
+    {
+        /*
+            try
             {
-                return new List<Districts>();
-            }
+                List<IbgeDistrictDto>? response =
+                    await _httpClient.GetFromJsonAsync<List<IbgeDistrictDto>>(
+                        $"localidades/municipios/{municipalityId}/distritos", _jsonOptions);
 
-            var districts = new List<Districts>();
-            foreach (IbgeDistrictDto item in response)
-            {
-                var district = new Districts
+                if (response == null)
                 {
-                    // Id = item.Id,
-                    // Name = item.Nome,
-                    // MunicipalityId = municipalityId
-                };
+                    return new List<Districts>();
+                }
 
-                districts.Add(district);
+                var districts = new List<Districts>();
+                foreach (IbgeDistrictDto item in response)
+                {
+                    var district = new Districts
+                    {
+                        // Id = item.Id,
+                        // Name = item.Nome,
+                        // MunicipalityId = municipalityId
+                    };
+
+                    districts.Add(district);
+                }
+
+                return districts;
             }
-
-            return districts;
-        }
-        catch (Exception ex)
-        {
-            //_logger.LogError(ex, "Erro ao buscar distritos do IBGE para o município {MunicipalityId}", municipalityId);
-            throw;
-        }*/
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Erro ao buscar distritos do IBGE para o município {MunicipalityId}", municipalityId);
+                throw;
+            }*/
         throw new NotImplementedException();
     }
 
     public async Task<List<SubDistricts>> GetSubDistrictsAsync(int districtId)
-    {/*
-        try
-        {
-            List<IbgeSubDistrictDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeSubDistrictDto>>(
-                    $"localidades/distritos/{districtId}/subdistritos", _jsonOptions);
-
-            if (response == null)
+    {
+        /*
+            try
             {
-                return new List<SubDistricts>();
-            }
+                List<IbgeSubDistrictDto>? response =
+                    await _httpClient.GetFromJsonAsync<List<IbgeSubDistrictDto>>(
+                        $"localidades/distritos/{districtId}/subdistritos", _jsonOptions);
 
-            var subDistricts = new List<SubDistricts>();
-            foreach (IbgeSubDistrictDto item in response)
-            {
-                var subDistrict = new SubDistricts
+                if (response == null)
                 {
-                    // Id = item.Id,
-                    // Name = item.Nome,
-                    // DistrictId = districtId.ToString()
-                };
+                    return new List<SubDistricts>();
+                }
 
-                subDistricts.Add(subDistrict);
+                var subDistricts = new List<SubDistricts>();
+                foreach (IbgeSubDistrictDto item in response)
+                {
+                    var subDistrict = new SubDistricts
+                    {
+                        // Id = item.Id,
+                        // Name = item.Nome,
+                        // DistrictId = districtId.ToString()
+                    };
+
+                    subDistricts.Add(subDistrict);
+                }
+
+                return subDistricts;
             }
-
-            return subDistricts;
-        }
-        catch (Exception ex)
-        {
-           // _logger.LogError(ex, "Erro ao buscar subdistritos do IBGE para o distrito {DistrictId}", districtId);
-            throw;
-        }*/
+            catch (Exception ex)
+            {
+               // _logger.LogError(ex, "Erro ao buscar subdistritos do IBGE para o distrito {DistrictId}", districtId);
+                throw;
+            }*/
         throw new NotImplementedException();
     }
 }
-
 
 /*
 public class IbgeStateDto
