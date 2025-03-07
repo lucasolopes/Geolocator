@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Commands\IbgeSync\" />
     <Folder Include="DTOs\" />
     <Folder Include="Queries\Handlers\" />
   </ItemGroup>
