@@ -5,7 +5,7 @@ namespace Application.DTOs;
 public class IbgeSubDistrictDto
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; } = null!;
     
     [JsonPropertyName("nome")]
     public string Nome { get; set; } = null!;

@@ -219,7 +219,7 @@ public class IbgeService : IIbgeService
     {
         try
         {
-            List<IbgeSubDistrictDto>? response =
+            List<IbgeSubDistrictDto>? response = 
                 await _httpClient.GetFromJsonAsync<List<IbgeSubDistrictDto>>(
                     $"localidades/distritos/{districtId}/subdistritos", _jsonOptions);
 
@@ -231,13 +231,21 @@ public class IbgeService : IIbgeService
             var subDistricts = new List<SubDistricts>();
             foreach (IbgeSubDistrictDto item in response)
             {
-                var subDistrict = new SubDistricts(
-                    item.Id,
-                    item.Nome,
-                    districtId.ToString()
-                );
+                // Tenta converter o ID para inteiro, ou usa um valor padrão se falhar
+                if (int.TryParse(item.Id, out int parsedId))
+                {
+                    var subDistrict = new SubDistricts(
+                        parsedId, 
+                        item.Nome, 
+                        districtId.ToString());
 
-                subDistricts.Add(subDistrict);
+                    subDistricts.Add(subDistrict);
+                }
+                else
+                {
+                    // Log de aviso sobre ID não convertível
+                    _logger.LogWarning("Não foi possível converter o ID '{Id}' para inteiro. Subdistrito ignorado.", item.Id);
+                }
             }
 
             return subDistricts;
