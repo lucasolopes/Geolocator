@@ -6,7 +6,7 @@ public class SubDistricts
     {
     }
     
-    public SubDistricts(int id, string name, string districtId)
+    public SubDistricts(int id, string name, int districtId)
     {
         Id = id;
         Name = name;
@@ -15,7 +15,7 @@ public class SubDistricts
 
     public int Id { get; private set; }
     public string Name { get; private set; } = null!;
-    public string DistrictId { get; private set; } = null!;
+    public int DistrictId { get; private set; }
 
     //Relationships
     public Districts District = null!;

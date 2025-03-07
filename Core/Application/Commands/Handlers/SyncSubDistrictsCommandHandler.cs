@@ -44,7 +44,7 @@ public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCo
                 _logger.LogInformation("Obtidos {Count} subdistritos da API do IBGE para o distrito {DistrictId}", 
                     ibgeSubDistricts.Count, district.Id);
 
-                List<SubDistricts> existingSubDistricts = await _subDistrictsRepository.GetByDistrictIdAsync(district.Id.ToString());
+                List<SubDistricts> existingSubDistricts = await _subDistrictsRepository.GetByDistrictIdAsync(district.Id);
                 
                 foreach (SubDistricts ibgeSubDistrict in ibgeSubDistricts)
                 {
@@ -55,7 +55,7 @@ public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCo
                         SubDistricts newSubDistrict = SubDistrictsFactory.Create(
                             ibgeSubDistrict.Id,
                             ibgeSubDistrict.Name,
-                            district.Id.ToString());
+                            district.Id);
                             
                         await _subDistrictsRepository.AddAsync(newSubDistrict);
                         _logger.LogInformation("Adicionado novo subdistrito: {Name}", ibgeSubDistrict.Name);
@@ -69,7 +69,7 @@ public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCo
                         SubDistricts updatedSubDistrict = SubDistrictsFactory.Create(
                             ibgeSubDistrict.Id,
                             ibgeSubDistrict.Name,
-                            district.Id.ToString());
+                            district.Id);
                                     
                         await _subDistrictsRepository.AddAsync(updatedSubDistrict);
                     }

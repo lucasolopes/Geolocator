@@ -237,7 +237,7 @@ public class IbgeService : IIbgeService
                     var subDistrict = new SubDistricts(
                         parsedId, 
                         item.Nome, 
-                        districtId.ToString());
+                        districtId);
 
                     subDistricts.Add(subDistrict);
                 }

@@ -32,7 +32,7 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
         return await _context.Set<SubDistricts>().FindAsync(id);
     }
 
-    public async Task<List<SubDistricts>> GetByDistrictIdAsync(string districtId)
+    public async Task<List<SubDistricts>> GetByDistrictIdAsync(int districtId)
     {
         return await _context.Set<SubDistricts>()
             .Where(s => s.DistrictId == districtId)
