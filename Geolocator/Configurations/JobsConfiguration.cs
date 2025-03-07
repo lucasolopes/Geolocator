@@ -18,7 +18,7 @@ public static class JobsConfiguration
                 .ForJob(jobKey)
                 .WithIdentity("IbgeSyncTrigger")
                 .StartNow()
-                .WithCronSchedule("0 0 1 * * ?"));
+                .WithCronSchedule("0 0 1 1 *"));
         });
 
         services.AddQuartzHostedService(options =>

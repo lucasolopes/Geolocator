@@ -232,7 +232,7 @@ public class IbgeService : IIbgeService
             foreach (IbgeSubDistrictDto item in response)
             {
                 var subDistrict = new SubDistricts(
-                    item.Id, 
+                    (int)item.Id, 
                     item.Nome, 
                     districtId); 
 
