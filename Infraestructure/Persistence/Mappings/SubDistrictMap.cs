@@ -18,6 +18,7 @@ public class SubDistrictMap : IEntityTypeConfiguration<SubDistricts>
             .IsRequired();
             
         builder.Property(p => p.DistrictId)
+            .HasColumnType("integer")
             .IsRequired();
     }
 }
