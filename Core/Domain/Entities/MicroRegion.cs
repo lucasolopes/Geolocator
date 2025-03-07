@@ -10,6 +10,8 @@ public class MicroRegion
     public List<Municipality> Municipalities = new List<Municipality>();
     public Mesoregion Mesoregion = null!;
 
+    public MicroRegion() { }
+
     public MicroRegion(int itemId, string itemNome, int mesoregionId)
     {
         Id = itemId;

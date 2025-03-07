@@ -2,6 +2,8 @@
 
 public class Region
 {
+    public Region() { }
+
     public Region(int id, string name, string initials)
     {
         Id = id;

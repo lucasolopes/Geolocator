@@ -10,6 +10,8 @@ public class Municipality
     public List<Districts> Districts = new List<Districts>();
     public MicroRegion MicroRegion = null!;
 
+    public Municipality() { }
+
     public Municipality(int itemId, string itemNome, int microregionId)
     {
         Id = itemId;

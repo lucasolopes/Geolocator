@@ -10,6 +10,8 @@ public class Districts
     public List<SubDistricts> SubDistricts = new List<SubDistricts>();
     public Municipality Municipality = null!;
 
+    public Districts() { }
+
     public Districts(int itemId, string itemNome, int municipalityId)
     {
         Id = itemId;
