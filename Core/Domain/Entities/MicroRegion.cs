@@ -3,7 +3,7 @@
 public class MicroRegion
 {
     public int Id { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
     public int MesoregionId { get; private set; }
 
     //Relationships

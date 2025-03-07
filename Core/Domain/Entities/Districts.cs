@@ -3,7 +3,7 @@
 public class Districts
 {
     public int Id { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
     public int MunicipalityId { get; private set; }
 
     //Relationships
