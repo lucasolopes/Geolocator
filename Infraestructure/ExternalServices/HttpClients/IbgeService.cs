@@ -231,21 +231,12 @@ public class IbgeService : IIbgeService
             var subDistricts = new List<SubDistricts>();
             foreach (IbgeSubDistrictDto item in response)
             {
-                // Tenta converter o ID para inteiro, ou usa um valor padrão se falhar
-                if (int.TryParse(item.Id, out int parsedId))
-                {
-                    var subDistrict = new SubDistricts(
-                        parsedId, 
-                        item.Nome, 
-                        districtId);
+                var subDistrict = new SubDistricts(
+                    item.Id, 
+                    item.Nome, 
+                    districtId); 
 
-                    subDistricts.Add(subDistrict);
-                }
-                else
-                {
-                    // Log de aviso sobre ID não convertível
-                    _logger.LogWarning("Não foi possível converter o ID '{Id}' para inteiro. Subdistrito ignorado.", item.Id);
-                }
+                subDistricts.Add(subDistrict);
             }
 
             return subDistricts;
