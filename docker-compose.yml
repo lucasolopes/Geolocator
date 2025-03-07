@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Geolocator/Dockerfile
+    env_file:
+      - geolocator.env
     ports:
      - "3001:8081"
      - "3000:8080" 
