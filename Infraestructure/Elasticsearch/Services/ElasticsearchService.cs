@@ -338,7 +338,7 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            var searchResponse = await _elasticClient.SearchAsync<StateDto>(s => s
+            ISearchResponse<StateDto>? searchResponse = await _elasticClient.SearchAsync<StateDto>(s => s
                 .Index(_options.StateIndexName)
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
