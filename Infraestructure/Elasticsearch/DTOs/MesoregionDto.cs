@@ -1,8 +1,10 @@
-﻿namespace Elasticsearch.DTOs;
+﻿using Nest;
+
+namespace Elasticsearch.DTOs;
 
 public class MesoregionDto
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = null!;
-    public int StateId { get; set; }
+    public long StateId { get; set; }
 }

@@ -33,54 +33,21 @@ public class SyncDistrictsCommandHandler : IRequestHandler<SyncDistrictsCommand>
 
         try
         {
-            List<Municipality> municipalities = await _municipalityRepository.GetAllAsync();
-            _logger.LogInformation("Obtidos {Count} municípios para sincronização de distritos", municipalities.Count);
+            List<Districts> ibgeDistricts = await _ibgeService.GetDistrictsAsync();
 
-            int totalProcessed = 0;
+            HashSet<long> districtsIds = await _districtsRepository.GetAllIdsAsync();
 
-            foreach (Municipality municipality in municipalities)
+            var newDistricts = ibgeDistricts.Where(d => !districtsIds.Contains(d.Id)).ToList();
+
+            if (newDistricts.Any())
             {
-                List<Districts> ibgeDistricts = await _ibgeService.GetDistrictsAsync(municipality.Id);
-                _logger.LogInformation("Obtidos {Count} distritos da API do IBGE para o município {MunicipalityId}", 
-                    ibgeDistricts.Count, municipality.Id);
-
-                List<Districts> existingDistricts = await _districtsRepository.GetByMunicipalityIdAsync(municipality.Id);
-                
-                foreach (Districts ibgeDistrict in ibgeDistricts)
-                {
-                    Districts? existingDistrict = existingDistricts.FirstOrDefault(d => d.Id == ibgeDistrict.Id);
-
-                    if (existingDistrict == null)
-                    {
-                        Districts newDistrict = DistrictsFactory.Create(
-                            ibgeDistrict.Id,
-                            ibgeDistrict.Name,
-                            municipality.Id);
-                            
-                        await _districtsRepository.AddAsync(newDistrict);
-                        _logger.LogInformation("Adicionado novo distrito: {Name}", ibgeDistrict.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Distrito já existe: {Name}", existingDistrict.Name);
-
-                        await _districtsRepository.DeleteAsync(existingDistrict);
-                                
-                        Districts updatedDistrict = DistrictsFactory.Create(
-                            ibgeDistrict.Id,
-                            ibgeDistrict.Name,
-                            municipality.Id);
-                                    
-                        await _districtsRepository.AddAsync(updatedDistrict);
-                    }
-                    
-                    totalProcessed++;
-                }
-                
-                await _districtsRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Encontrados {Count} novos distritos", newDistricts.Count);
+                await _districtsRepository.AddRangeAsync(newDistricts);
             }
 
-            _logger.LogInformation("Sincronização de distritos concluída com sucesso. Processados {Count} distritos", totalProcessed);
+            await _districtsRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sincronização de distritos concluída com sucesso. Processados {Count} distritos", newDistricts.Count);
         }
         catch (Exception ex)
         {

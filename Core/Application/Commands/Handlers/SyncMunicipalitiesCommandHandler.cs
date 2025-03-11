@@ -33,54 +33,21 @@ public class SyncMunicipalitiesCommandHandler : IRequestHandler<SyncMunicipaliti
 
         try
         {
-            List<MicroRegion> microRegions = await _microRegionRepository.GetAllAsync();
-            _logger.LogInformation("Obtidas {Count} microrregiões para sincronização de municípios", microRegions.Count);
+            List<Municipality> ibgeMunicipalities = await _ibgeService.GetMunicipalitiesAsync();
 
-            int totalProcessed = 0;
+            HashSet<long> municipalitiesIds = new(await _municipalityRepository.GetAllIdsAsync());
 
-            foreach (MicroRegion microRegion in microRegions)
+            var newMunicipalities = ibgeMunicipalities.Where(m => !municipalitiesIds.Contains(m.Id)).ToList();
+
+            if (newMunicipalities.Any())
             {
-                List<Municipality> ibgeMunicipalities = await _ibgeService.GetMunicipalitiesAsync(microRegion.Id);
-                _logger.LogInformation("Obtidos {Count} municípios da API do IBGE para a microrregião {MicroRegionId}", 
-                    ibgeMunicipalities.Count, microRegion.Id);
-
-                List<Municipality> existingMunicipalities = await _municipalityRepository.GetByMicroRegionIdAsync(microRegion.Id);
-                
-                foreach (Municipality ibgeMunicipality in ibgeMunicipalities)
-                {
-                    Municipality? existingMunicipality = existingMunicipalities.FirstOrDefault(m => m.Id == ibgeMunicipality.Id);
-
-                    if (existingMunicipality == null)
-                    {
-                        Municipality newMunicipality = MunicipalityFactory.Create(
-                            ibgeMunicipality.Id,
-                            ibgeMunicipality.Name,
-                            microRegion.Id);
-                            
-                        await _municipalityRepository.AddAsync(newMunicipality);
-                        _logger.LogInformation("Adicionado novo município: {Name}", ibgeMunicipality.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Município já existe: {Name}", existingMunicipality.Name);
-
-                        await _municipalityRepository.DeleteAsync(existingMunicipality);
-                                
-                        Municipality updatedMunicipality = MunicipalityFactory.Create(
-                            ibgeMunicipality.Id,
-                            ibgeMunicipality.Name,
-                            microRegion.Id);
-                                    
-                        await _municipalityRepository.AddAsync(updatedMunicipality);
-                    }
-                    
-                    totalProcessed++;
-                }
-                
-                await _municipalityRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Encontrados {Count} novos municípios", newMunicipalities.Count);
+                await _municipalityRepository.AddRangeAsync(newMunicipalities);
             }
 
-            _logger.LogInformation("Sincronização de municípios concluída com sucesso. Processados {Count} municípios", totalProcessed);
+            await _municipalityRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sincronização de municípios concluída com sucesso. Processados {Count} municípios", newMunicipalities.Count);
         }
         catch (Exception ex)
         {

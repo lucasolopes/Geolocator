@@ -27,16 +27,26 @@ public class DistrictsRepository(GeolocatorDbContext context) : IDistrictsReposi
         return await _context.Districts.ToListAsync();
     }
 
-    public async Task<Districts> GetByIdAsync(int id)
+    public async Task<Districts> GetByIdAsync(long id)
     {
         return await _context.Districts.FindAsync(id);
     }
 
-    public async Task<List<Districts>> GetByMunicipalityIdAsync(int municipalityId)
+    public async Task<List<Districts>> GetByMunicipalityIdAsync(long municipalityId)
     {
         return await _context.Districts
             .Where(d => d.MunicipalityId == municipalityId)
             .ToListAsync();
+    }
+
+    public async Task<HashSet<long>> GetAllIdsAsync()
+    {
+        return new HashSet<long>(await _context.Districts.AsNoTracking().Select(e => e.Id).ToListAsync());
+    }
+
+    public async Task AddRangeAsync(List<Districts> newDistricts)
+    {
+        await _context.Districts.AddRangeAsync(newDistricts);
     }
 
     public Task UpdateAsync(Districts entity)

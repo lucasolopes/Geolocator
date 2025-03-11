@@ -5,6 +5,6 @@ namespace Application.Interfaces.Repositories;
 public interface IDistrictsRepository : IRepository<Districts>
 {
     Task<List<Districts>> GetAllAsync();
-    Task<Districts> GetByIdAsync(int id);
-    Task<List<Districts>> GetByMunicipalityIdAsync(int municipalityId);
+    Task<Districts> GetByIdAsync(long id);
+    Task<List<Districts>> GetByMunicipalityIdAsync(long municipalityId);
 }

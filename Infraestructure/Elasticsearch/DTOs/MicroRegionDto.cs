@@ -2,7 +2,7 @@
 
 public class MicroRegionDto
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = null!;
-    public int MesoregionId { get; set; }
+    public long MesoregionId { get; set; }
 }

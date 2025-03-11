@@ -1,18 +1,19 @@
-﻿namespace Domain.Entities;
+﻿using System.Runtime.CompilerServices;
+
+namespace Domain.Entities;
 
 public class MicroRegion
 {
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public int MesoregionId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long MesoregionId { get; set; }
 
     //Relationships
     public List<Municipality> Municipalities = new List<Municipality>();
     public Mesoregion Mesoregion = null!;
-
     public MicroRegion() { }
 
-    public MicroRegion(int itemId, string itemNome, int mesoregionId)
+    public MicroRegion(long itemId, string itemNome, long mesoregionId)
     {
         Id = itemId;
         Name = itemNome;

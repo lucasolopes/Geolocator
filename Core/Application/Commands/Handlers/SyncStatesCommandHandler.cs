@@ -31,49 +31,18 @@ public class SyncStatesCommandHandler : IRequestHandler<SyncStatesCommand>
         try
         {
             List<State> ibgeStates = await _ibgeService.GetStatesAsync();
-            _logger.LogInformation("Obtidos {Count} estados da API do IBGE", ibgeStates.Count);
 
-            List<State> existingStates = await _stateRepository.GetAllAsync();
-            _logger.LogInformation("Existem {Count} estados no banco de dados", existingStates.Count);
+            HashSet<long> statesIds = new(await _stateRepository.GetAllIdsAsync());
 
-            int processedCount = 0;
+            var newStates = ibgeStates.Where(s => !statesIds.Contains(s.Id)).ToList();
 
-            foreach (State ibgeState in ibgeStates)
+            if (newStates.Any())
             {
-                State? existingState = existingStates.FirstOrDefault(s => s.Id == ibgeState.Id);
-
-                if (existingState == null)
-                {
-                    State newState = StateFactory.Create(
-                        ibgeState.Id,
-                        ibgeState.Name,
-                        ibgeState.Initials,
-                        ibgeState.RegionId);
-                        
-                    await _stateRepository.AddAsync(newState);
-                    _logger.LogInformation("Adicionado novo estado: {Name}", ibgeState.Name);
-                }
-                else
-                {
-                    _logger.LogInformation("Estado já existe: {Name}", existingState.Name);
-
-                    await _stateRepository.DeleteAsync(existingState);
-                            
-                    State updatedState = StateFactory.Create(
-                        ibgeState.Id,
-                        ibgeState.Name,
-                        ibgeState.Initials,
-                        ibgeState.RegionId);
-                                
-                    await _stateRepository.AddAsync(updatedState);
-                }
-                
-                processedCount++;
+                _logger.LogInformation("Encontrados {Count} novos estados", newStates.Count);
+                await _stateRepository.AddRangeAsync(newStates);
             }
-            
-            await _stateRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de estados concluída com sucesso. Processados {Count} estados", processedCount);
+            await _stateRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {

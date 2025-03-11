@@ -2,9 +2,9 @@
 
 public class Districts
 {
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public int MunicipalityId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long MunicipalityId { get; set; }
 
     //Relationships
     public List<SubDistricts> SubDistricts = new List<SubDistricts>();
@@ -12,7 +12,7 @@ public class Districts
 
     public Districts() { }
 
-    public Districts(int itemId, string itemNome, int municipalityId)
+    public Districts(long itemId, string itemNome, long municipalityId)
     {
         Id = itemId;
         Name = itemNome;

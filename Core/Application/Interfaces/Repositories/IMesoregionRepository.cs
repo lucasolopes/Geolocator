@@ -5,6 +5,6 @@ namespace Application.Interfaces.Repositories;
 public interface IMesoregionRepository : IRepository<Mesoregion>
 {
     Task<List<Mesoregion>> GetAllAsync();
-    Task<Mesoregion> GetByIdAsync(int id);
-    Task<List<Mesoregion>> GetByStateIdAsync(int stateId);
+    Task<Mesoregion> GetByIdAsync(long id);
+    Task<List<Mesoregion>> GetByStateIdAsync(long stateId);
 }

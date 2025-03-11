@@ -6,16 +6,16 @@ public class SubDistricts
     {
     }
     
-    public SubDistricts(int id, string name, int districtId)
+    public SubDistricts(long id, string name, long districtId)
     {
         Id = id;
         Name = name;
         DistrictId = districtId;
     }
 
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public int DistrictId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long DistrictId { get; set; }
 
     //Relationships
     public Districts District = null!;

@@ -9,6 +9,15 @@ public class StateRepository(GeolocatorDbContext context) : IStateRepository
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+    public async Task<HashSet<long>> GetAllIdsAsync()
+    {
+        return new HashSet<long>(await _context.States.Select(s => s.Id).ToListAsync());
+    }
+
+    public async Task AddRangeAsync(List<State> entities)
+    {
+        await _context.States.AddRangeAsync(entities);
+    }
 
     public async Task<State> AddAsync(State entity)
     {
@@ -27,7 +36,7 @@ public class StateRepository(GeolocatorDbContext context) : IStateRepository
         return await _context.States.ToListAsync();
     }
 
-    public async Task<State> GetByIdAsync(int id)
+    public async Task<State> GetByIdAsync(long id)
     {
         return await _context.States.FindAsync(id);
     }

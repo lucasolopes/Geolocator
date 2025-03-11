@@ -2,7 +2,7 @@
 
 public class DistrictsDto
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = null!;
-    public int MunicipalityId { get; set; }
+    public long MunicipalityId { get; set; }
 }

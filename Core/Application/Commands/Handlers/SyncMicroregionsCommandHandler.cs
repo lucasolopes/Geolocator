@@ -33,54 +33,21 @@ public class SyncMicroregionsCommandHandler : IRequestHandler<SyncMicroregionsCo
 
         try
         {
-            List<Mesoregion> mesoregions = await _mesoregionRepository.GetAllAsync();
-            _logger.LogInformation("Obtidas {Count} mesorregiões para sincronização de microrregiões", mesoregions.Count);
+            List<MicroRegion> ibgeMicroregions = await _ibgeService.GetMicroregionsAsync();
 
-            int totalProcessed = 0;
+            HashSet<long> microregionsIds = new(await _microRegionRepository.GetAllIdsAsync());
 
-            foreach (Mesoregion mesoregion in mesoregions)
+            var newMicroregions = ibgeMicroregions.Where(m => !microregionsIds.Contains(m.Id)).ToList();
+
+            if (newMicroregions.Any())
             {
-                List<MicroRegion> ibgeMicroregions = await _ibgeService.GetMicroregionsAsync(mesoregion.Id);
-                _logger.LogInformation("Obtidas {Count} microrregiões da API do IBGE para a mesorregião {MesoregionId}", 
-                    ibgeMicroregions.Count, mesoregion.Id);
-
-                List<MicroRegion> existingMicroregions = await _microRegionRepository.GetByMesoregionIdAsync(mesoregion.Id);
-                
-                foreach (MicroRegion ibgeMicroregion in ibgeMicroregions)
-                {
-                    MicroRegion? existingMicroregion = existingMicroregions.FirstOrDefault(m => m.Id == ibgeMicroregion.Id);
-
-                    if (existingMicroregion == null)
-                    {
-                        MicroRegion newMicroregion = MicroRegionFactory.Create(
-                            ibgeMicroregion.Id,
-                            ibgeMicroregion.Name,
-                            mesoregion.Id);
-                            
-                        await _microRegionRepository.AddAsync(newMicroregion);
-                        _logger.LogInformation("Adicionada nova microrregião: {Name}", ibgeMicroregion.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Microrregião já existe: {Name}", existingMicroregion.Name);
-
-                        await _microRegionRepository.DeleteAsync(existingMicroregion);
-                                
-                        MicroRegion updatedMicroregion = MicroRegionFactory.Create(
-                            ibgeMicroregion.Id,
-                            ibgeMicroregion.Name,
-                            mesoregion.Id);
-                                    
-                        await _microRegionRepository.AddAsync(updatedMicroregion);
-                    }
-                    
-                    totalProcessed++;
-                }
-                
-                await _microRegionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Encontradas {Count} novas microrregiões", newMicroregions.Count);
+                await _microRegionRepository.AddRangeAsync(newMicroregions);
             }
 
-            _logger.LogInformation("Sincronização de microrregiões concluída com sucesso. Processadas {Count} microrregiões", totalProcessed);
+            await _microRegionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sincronização de microrregiões concluída com sucesso. Processadas {Count} microrregiões", newMicroregions.Count);
         }
         catch (Exception ex)
         {

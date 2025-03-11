@@ -6,7 +6,7 @@ public class Municipality
     public Municipality() { }
 
     // Construtor para uso normal
-    public Municipality(int id, string name, int microRegionId)
+    public Municipality(long id, string name, long microRegionId)
     {
         Id = id;
         Name = name;
@@ -14,11 +14,11 @@ public class Municipality
     }
 
     // Propriedades com getters públicos e setters privados ou públicos
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public int MicroRegionId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long MicroRegionId { get; set; }
 
     // Relacionamentos (que o Elasticsearch não precisa)
-    public List<Districts> Districts { get; private set; } = new List<Districts>();
-    public MicroRegion MicroRegion { get; private set; } = null!;
+    public List<Districts> Districts { get; set; } = new List<Districts>();
+    public MicroRegion MicroRegion { get; set; } = null!;
 }

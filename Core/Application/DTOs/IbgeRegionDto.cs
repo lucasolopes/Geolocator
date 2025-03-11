@@ -4,8 +4,15 @@ namespace Application.DTOs;
 
 public class IbgeRegionDto
 {
+    public IbgeRegionDto(long id, string nome, string sigla)
+    {
+        Id = id;
+        Nome = nome;
+        Sigla = sigla;
+    }
+
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public long Id { get; set; }
     
     [JsonPropertyName("nome")]
     public string Nome { get; set; } = null!;

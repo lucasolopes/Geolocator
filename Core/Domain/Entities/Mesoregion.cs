@@ -2,9 +2,9 @@
 
 public class Mesoregion
 {
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public int StateId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long StateId { get; set; }
 
     //Relationships
     public List<MicroRegion> MicroRegions = new List<MicroRegion>();
@@ -12,7 +12,7 @@ public class Mesoregion
 
     public Mesoregion() { }
 
-    public Mesoregion(int itemId, string itemNome, int stateId)
+    public Mesoregion(long itemId, string itemNome, long stateId)
     {
         Id = itemId;
         Name = itemNome;

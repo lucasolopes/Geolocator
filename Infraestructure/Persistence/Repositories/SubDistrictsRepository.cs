@@ -9,6 +9,15 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+    public async Task<HashSet<long>> GetAllIdsAsync()
+    {
+        return new HashSet<long>(await _context.Set<SubDistricts>().Select(s => s.Id).ToListAsync());
+    }
+
+    public async Task AddRangeAsync(List<SubDistricts> entities)
+    {
+        await _context.Set<SubDistricts>().AddRangeAsync(entities);
+    }
 
     public async Task<SubDistricts> AddAsync(SubDistricts entity)
     {
@@ -27,12 +36,12 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
         return await _context.Set<SubDistricts>().ToListAsync();
     }
 
-    public async Task<SubDistricts> GetByIdAsync(int id)
+    public async Task<SubDistricts> GetByIdAsync(long id)
     {
         return await _context.Set<SubDistricts>().FindAsync(id);
     }
 
-    public async Task<List<SubDistricts>> GetByDistrictIdAsync(int districtId)
+    public async Task<List<SubDistricts>> GetByDistrictIdAsync(long districtId)
     {
         return await _context.Set<SubDistricts>()
             .Where(s => s.DistrictId == districtId)

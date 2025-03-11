@@ -33,58 +33,25 @@ public class SyncMesoregionsCommandHandler : IRequestHandler<SyncMesoregionsComm
 
         try
         {
-            List<State> states = await _stateRepository.GetAllAsync();
-            _logger.LogInformation("Obtidos {Count} estados para sincronização de mesorregiões", states.Count);
+            List<Mesoregion> ibgeMesoregions = await _ibgeService.GetMesoregionsAsync();
 
-            int totalProcessed = 0;
+            HashSet<long> mesoregionsIds = new(await _mesoregionRepository.GetAllIdsAsync());
 
-            foreach (State state in states)
+            var newMesoregions = ibgeMesoregions.Where(m => !mesoregionsIds.Contains(m.Id)).ToList();
+
+            if (newMesoregions.Any())
             {
-                List<Mesoregion> ibgeMesoregions = await _ibgeService.GetMesoregionsAsync(state.Id);
-                _logger.LogInformation("Obtidas {Count} mesorregiões da API do IBGE para o estado {StateId}", 
-                    ibgeMesoregions.Count, state.Id);
-
-                List<Mesoregion> existingMesoregions = await _mesoregionRepository.GetByStateIdAsync(state.Id);
-                
-                foreach (Mesoregion ibgeMesoregion in ibgeMesoregions)
-                {
-                    Mesoregion? existingMesoregion = existingMesoregions.FirstOrDefault(m => m.Id == ibgeMesoregion.Id);
-
-                    if (existingMesoregion == null)
-                    {
-                        Mesoregion newMesoregion = MesoregionFactory.Create(
-                            ibgeMesoregion.Id,
-                            ibgeMesoregion.Name,
-                            state.Id);
-                            
-                        await _mesoregionRepository.AddAsync(newMesoregion);
-                        _logger.LogInformation("Adicionada nova mesorregião: {Name}", ibgeMesoregion.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Mesorregião já existe: {Name}", existingMesoregion.Name);
-
-                        await _mesoregionRepository.DeleteAsync(existingMesoregion);
-                                
-                        Mesoregion updatedMesoregion = MesoregionFactory.Create(
-                            ibgeMesoregion.Id,
-                            ibgeMesoregion.Name,
-                            state.Id);
-                                    
-                        await _mesoregionRepository.AddAsync(updatedMesoregion);
-                    }
-                    
-                    totalProcessed++;
-                }
-                
-                await _mesoregionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Encontradas {Count} novas mesorregiões", newMesoregions.Count);
+                await _mesoregionRepository.AddRangeAsync(newMesoregions);
             }
 
-            _logger.LogInformation("Sincronização de mesorregiões concluída com sucesso. Processadas {Count} mesorregiões", totalProcessed);
+            await _mesoregionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sincronização de mesorregiões concluída com sucesso. Processadas {Count} mesorregiões", newMesoregions.Count);
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _logger.LogError(ex, "Erro durante a sincronização de mesorregiões");
+            _logger.LogError(e, "Erro durante a sincronização de mesorregiões");
             throw;
         }
     }

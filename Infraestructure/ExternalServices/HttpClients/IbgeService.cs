@@ -4,13 +4,13 @@ using Application.DTOs;
 using Application.Interfaces.Services;
 using Domain.Entities;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace ExternalServices.HttpClients;
 
 public class IbgeService : IIbgeService
 {
     private readonly HttpClient _httpClient;
-    private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<IbgeService> _logger;
 
     public IbgeService(HttpClient httpClient, ILogger<IbgeService> logger)
@@ -19,22 +19,37 @@ public class IbgeService : IIbgeService
         _logger = logger;
 
         _httpClient.BaseAddress = new Uri("https://servicodados.ibge.gov.br/api/v1/");
-
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
     }
 
-    public async Task<List<IbgeRegionDto>> GetRegionsFromIbgeAsync()
+    private async Task<List<dynamic>?> GetJsonAsync(string url)
     {
         try
         {
-            List<IbgeRegionDto>? response = await _httpClient.GetFromJsonAsync<List<IbgeRegionDto>>(
-                "localidades/regioes",
-                _jsonOptions);
+            string response = await _httpClient.GetStringAsync(url);
+            if (response == null)
+            {
+                return new List<dynamic>();
+            }
+            return JsonConvert.DeserializeObject<List<dynamic>>(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar dados do IBGE");
+            throw;
+        }
+    }
 
-            return response ?? new List<IbgeRegionDto>();
+    public async Task<List<Region>> GetRegionsAsync()
+    {
+        try
+        {
+            List<dynamic>? json = await GetJsonAsync("localidades/regioes");
+
+            return json.Select(e => new Region{
+                Id = int.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                Initials = e["sigla"].ToString()
+                }).ToList();
         }
         catch (Exception ex)
         {
@@ -47,28 +62,14 @@ public class IbgeService : IIbgeService
     {
         try
         {
-            List<IbgeStateDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeStateDto>>("localidades/estados", _jsonOptions);
+            List<dynamic>? json = await GetJsonAsync("localidades/estados");
 
-            if (response == null)
-            {
-                return new List<State>();
-            }
-
-            var states = new List<State>();
-            foreach (IbgeStateDto item in response)
-            {
-                var state = new State(
-                    item.Id,
-                    item.Nome,
-                    item.Sigla,
-                    item.Regiao.Id
-                );
-
-                states.Add(state);
-            }
-
-            return states;
+            return json.Select(e => new State{
+                Id = int.Parse(e["id"].ToString()), 
+                Name = e["nome"].ToString(),
+                Initials = e["sigla"].ToString(), 
+                RegionId = int.Parse(e["regiao"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
@@ -77,173 +78,97 @@ public class IbgeService : IIbgeService
         }
     }
 
-    public async Task<List<Mesoregion>> GetMesoregionsAsync(int stateId)
+    public async Task<List<Mesoregion>> GetMesoregionsAsync()
     {
         try
         {
-            List<IbgeMesoregionDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeMesoregionDto>>(
-                    $"localidades/estados/{stateId}/mesorregioes", _jsonOptions);
+            List<dynamic>? json = await GetJsonAsync("localidades/mesorregioes");
 
-            if (response == null)
-            {
-                return new List<Mesoregion>();
-            }
-
-            var mesoregions = new List<Mesoregion>();
-            foreach (IbgeMesoregionDto item in response)
-            {
-                var mesoregion = new Mesoregion(
-                    item.Id,
-                    item.Nome,
-                    stateId
-                );
-
-                mesoregions.Add(mesoregion);
-            }
-
-            return mesoregions;
+            return json.Select(e => new Mesoregion{
+                Id = int.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                StateId = int.Parse(e["UF"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar mesorregiões do IBGE para o estado {StateId}", stateId);
+            _logger.LogError(ex, "Erro ao buscar mesorregiões do IBGE");
             throw;
         }
     }
 
-    public async Task<List<MicroRegion>> GetMicroregionsAsync(int mesoregionId)
+    public async Task<List<MicroRegion>> GetMicroregionsAsync()
     {
         try
         {
-            List<IbgeMicroregionDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeMicroregionDto>>(
-                    $"localidades/mesorregioes/{mesoregionId}/microrregioes", _jsonOptions);
+            List<dynamic>? json = await GetJsonAsync("localidades/microrregioes");
 
-            if (response == null)
-            {
-                return new List<MicroRegion>();
-            }
-
-            var microregions = new List<MicroRegion>();
-            foreach (IbgeMicroregionDto item in response)
-            {
-                var microregion = new MicroRegion(
-                    item.Id,
-                    item.Nome,
-                    mesoregionId
-                );
-
-                microregions.Add(microregion);
-            }
-
-            return microregions;
+            return json.Select(e => new MicroRegion{
+                Id = int.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                MesoregionId = int.Parse(e["mesorregiao"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar microrregiões do IBGE para a mesorregião {MesoregionId}",
-                mesoregionId);
+            _logger.LogError(ex, "Erro ao buscar microrregiões do IBGE");
             throw;
         }
     }
 
-    public async Task<List<Municipality>> GetMunicipalitiesAsync(int microregionId)
+    public async Task<List<Municipality>> GetMunicipalitiesAsync()
     {
         try
         {
-            List<IbgeMunicipalityDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeMunicipalityDto>>(
-                    $"localidades/microrregioes/{microregionId}/municipios", _jsonOptions);
+            List<dynamic>? json = await GetJsonAsync("localidades/municipios");
 
-            if (response == null)
-            {
-                return new List<Municipality>();
-            }
-
-            var municipalities = new List<Municipality>();
-            foreach (IbgeMunicipalityDto item in response)
-            {
-                var municipality = new Municipality(
-                    item.Id,
-                    item.Nome,
-                    microregionId
-                );
-
-                municipalities.Add(municipality);
-            }
-
-            return municipalities;
+            return json.Select(e => new Municipality{
+                Id = int.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                MicroRegionId = int.Parse(e["microrregiao"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar municípios do IBGE para a microrregião {MicroregionId}",
-                microregionId);
+            _logger.LogError(ex, "Erro ao buscar municípios do IBGE");
             throw;
         }
     }
 
-    public async Task<List<Districts>> GetDistrictsAsync(int municipalityId)
+    public async Task<List<Districts>> GetDistrictsAsync()
     {
         try
         {
-            List<IbgeDistrictDto>? response =
-                await _httpClient.GetFromJsonAsync<List<IbgeDistrictDto>>(
-                    $"localidades/municipios/{municipalityId}/distritos", _jsonOptions);
+            List<dynamic>? json = await GetJsonAsync($"localidades/distritos");
 
-            if (response == null)
-            {
-                return new List<Districts>();
-            }
-
-            var districts = new List<Districts>();
-            foreach (IbgeDistrictDto item in response)
-            {
-                var district = new Districts(
-                    item.Id,
-                    item.Nome,
-                    municipalityId
-                );
-
-                districts.Add(district);
-            }
-
-            return districts;
+            return json.Select(e => new Districts{
+                Id = int.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                MunicipalityId = int.Parse(e["municipio"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar distritos do IBGE para o município {MunicipalityId}", municipalityId);
+            _logger.LogError(ex, "Erro ao buscar distritos do IBGE");
             throw;
         }
     }
 
-    public async Task<List<SubDistricts>> GetSubDistrictsAsync(int districtId)
+    public async Task<List<SubDistricts>> GetSubDistrictsAsync()
     {
         try
         {
-            List<IbgeSubDistrictDto>? response = 
-                await _httpClient.GetFromJsonAsync<List<IbgeSubDistrictDto>>(
-                    $"localidades/distritos/{districtId}/subdistritos", _jsonOptions);
+           List<dynamic>? json = await GetJsonAsync($"localidades/subdistritos");
 
-            if (response == null)
-            {
-                return new List<SubDistricts>();
-            }
-
-            var subDistricts = new List<SubDistricts>();
-            foreach (IbgeSubDistrictDto item in response)
-            {
-                var subDistrict = new SubDistricts(
-                    (int)item.Id, 
-                    item.Nome, 
-                    districtId); 
-
-                subDistricts.Add(subDistrict);
-            }
-
-            return subDistricts;
+            return json.Select(e => new SubDistricts{
+                Id = long.Parse(e["id"].ToString()),
+                Name = e["nome"].ToString(),
+                DistrictId = int.Parse(e["distrito"]["id"].ToString())
+                }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar subdistritos do IBGE para o distrito {DistrictId}", districtId);
+            _logger.LogError(ex, "Erro ao buscar subdistritos do IBGE para o distrito");
             throw;
         }
     }

@@ -6,7 +6,7 @@ public class State
     public State() { }
 
     // Construtor para uso normal
-    public State(int id, string name, string initials, int regionId)
+    public State(long id, string name, string initials, long regionId)
     {
         Id = id;
         Name = name;
@@ -14,12 +14,12 @@ public class State
         RegionId = regionId;
     }
 
-    public int Id { get; private set; }
-    public string Name { get; private set; } = null!;
-    public string Initials { get; private set; } = null!;
-    public int RegionId { get; private set; }
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string Initials { get; set; } = null!;
+    public long RegionId { get; set; }
 
     //Relationships
-    public List<Mesoregion> Mesoregions { get; private set; } = new List<Mesoregion>();
-    public Region Region { get; private set; } = null!;
+    public List<Mesoregion> Mesoregions { get; set; } = new List<Mesoregion>();
+    public Region Region { get; set; } = null!;
 }

@@ -324,7 +324,7 @@ public class ElasticsearchService : IElasticsearchService
 
             return MapSearchResults<Region, RegionDto>(
                 searchResponse,
-                dto => new Region(dto.Id, dto.Name, dto.Initials)
+                dto => new Region{Id= dto.Id, Name= dto.Name, Initials = dto.Initials}
             );
         }
         catch (Exception ex)

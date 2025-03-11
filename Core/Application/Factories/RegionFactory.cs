@@ -9,6 +9,11 @@ public static class RegionFactory
         name = name?.Trim() ?? throw new ArgumentNullException(nameof(name));
         initials = initials?.Trim() ?? throw new ArgumentNullException(nameof(initials));
 
-        return new Region(id, name, initials);
+        return new Region
+        {
+            Id = id,
+            Name = name,
+            Initials = initials
+        };
     }
 }

@@ -5,5 +5,5 @@ namespace Application.Interfaces.Repositories;
 public interface IRegionRepository : IRepository<Region>
 {
     Task<List<Region>> GetAllAsync();
-    Task<Region> GetByIdAsync(int id);
+    Task<Region> GetByIdAsync(long id);
 }

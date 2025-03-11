@@ -9,6 +9,15 @@ public class MunicipalityRepository(GeolocatorDbContext context) : IMunicipality
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+    public async Task<HashSet<long>> GetAllIdsAsync()
+    {
+        return new HashSet<long>(await _context.Municipalities.Select(m => m.Id).ToListAsync());
+    }
+
+    public async Task AddRangeAsync(List<Municipality> entities)
+    {
+        await _context.Municipalities.AddRangeAsync(entities);
+    }
 
     public async Task<Municipality> AddAsync(Municipality entity)
     {
@@ -27,12 +36,12 @@ public class MunicipalityRepository(GeolocatorDbContext context) : IMunicipality
         return await _context.Municipalities.ToListAsync();
     }
 
-    public async Task<Municipality> GetByIdAsync(int id)
+    public async Task<Municipality> GetByIdAsync(long id)
     {
         return await _context.Municipalities.FindAsync(id);
     }
 
-    public async Task<List<Municipality>> GetByMicroRegionIdAsync(int microRegionId)
+    public async Task<List<Municipality>> GetByMicroRegionIdAsync(long microRegionId)
     {
         return await _context.Municipalities
             .Where(m => m.MicroRegionId == microRegionId)

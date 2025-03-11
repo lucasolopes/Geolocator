@@ -24,50 +24,21 @@ public class SyncRegionsCommandHandler(
 
         try
         {
-            List<IbgeRegionDto> ibgeRegions = await _ibgeService.GetRegionsFromIbgeAsync();
-            _logger.LogInformation("Obtidas {Count} regiões da API do IBGE", ibgeRegions.Count);
+            List<Region> ibgeRegions = await _ibgeService.GetRegionsAsync();
 
-            List<Region> existingRegions = await _regionRepository.GetAllAsync();
-            _logger.LogInformation("Existem {Count} regiões no banco de dados", existingRegions.Count);
+            HashSet<long> regionsIds = new(await _regionRepository.GetAllIdsAsync());
 
-            int processedCount = 0;
+            var newRegions = ibgeRegions.Where(r => !regionsIds.Contains(r.Id)).ToList();
 
-            foreach (IbgeRegionDto ibgeRegion in ibgeRegions)
+            if (newRegions.Any())
             {
-                Region? existingRegion = existingRegions.FirstOrDefault(r => r.Id == ibgeRegion.Id);
-
-                var regions = new List<Region>();
-
-                if (existingRegion == null)
-                {
-                    Region newRegion = RegionFactory.Create(
-                        ibgeRegion.Id,
-                        ibgeRegion.Nome,
-                        ibgeRegion.Sigla);
-                        
-                    await _regionRepository.AddAsync(newRegion);
-                    regions.Add(newRegion);
-                    _logger.LogInformation("Adicionada nova região: {Name}", ibgeRegion.Nome);
-                }
-                else
-                {
-                      _logger.LogInformation("Região já existe: {Name}", existingRegion.Name);
-
-                      await _regionRepository.DeleteAsync(existingRegion);
-                            
-                      Region updatedRegion = RegionFactory.Create(
-                          ibgeRegion.Id,
-                          ibgeRegion.Nome,
-                          ibgeRegion.Sigla);
-                                
-                      await _regionRepository.AddAsync(updatedRegion);
-                      regions.Add(updatedRegion);
-                }
-                processedCount++;
+                _logger.LogInformation("Encontradas {Count} novas regiões", newRegions.Count);
+                await _regionRepository.AddRangeAsync(newRegions);
             }
+
             await _regionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de regiões concluída com sucesso. Processadas {Count} regiões", processedCount);
+            _logger.LogInformation("Sincronização de regiões concluída com sucesso. Processadas {Count} regiões", newRegions.Count);
         }
         catch (Exception ex)
         {

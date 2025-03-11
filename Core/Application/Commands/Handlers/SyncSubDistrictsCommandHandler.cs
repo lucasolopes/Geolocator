@@ -33,54 +33,21 @@ public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCo
 
         try
         {
-            List<Districts> districts = await _districtsRepository.GetAllAsync();
-            _logger.LogInformation("Obtidos {Count} distritos para sincronização de subdistritos", districts.Count);
+            List<SubDistricts> ibgeSubDistricts = await _ibgeService.GetSubDistrictsAsync();
 
-            int totalProcessed = 0;
+            HashSet<long> subDistrictsIds = new(await _subDistrictsRepository.GetAllIdsAsync());
 
-            foreach (Districts district in districts)
+            var newSubDistricts = ibgeSubDistricts.Where(s => !subDistrictsIds.Contains(s.Id)).ToList();
+
+            if (newSubDistricts.Any())
             {
-                List<SubDistricts> ibgeSubDistricts = await _ibgeService.GetSubDistrictsAsync(district.Id);
-                _logger.LogInformation("Obtidos {Count} subdistritos da API do IBGE para o distrito {DistrictId}", 
-                    ibgeSubDistricts.Count, district.Id);
-
-                List<SubDistricts> existingSubDistricts = await _subDistrictsRepository.GetByDistrictIdAsync(district.Id);
-                
-                foreach (SubDistricts ibgeSubDistrict in ibgeSubDistricts)
-                {
-                    SubDistricts? existingSubDistrict = existingSubDistricts.FirstOrDefault(s => s.Id == ibgeSubDistrict.Id);
-
-                    if (existingSubDistrict == null)
-                    {
-                        SubDistricts newSubDistrict = SubDistrictsFactory.Create(
-                            ibgeSubDistrict.Id,
-                            ibgeSubDistrict.Name,
-                            district.Id);
-                            
-                        await _subDistrictsRepository.AddAsync(newSubDistrict);
-                        _logger.LogInformation("Adicionado novo subdistrito: {Name}", ibgeSubDistrict.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Subdistrito já existe: {Name}", existingSubDistrict.Name);
-
-                        await _subDistrictsRepository.DeleteAsync(existingSubDistrict);
-                                
-                        SubDistricts updatedSubDistrict = SubDistrictsFactory.Create(
-                            ibgeSubDistrict.Id,
-                            ibgeSubDistrict.Name,
-                            district.Id);
-                                    
-                        await _subDistrictsRepository.AddAsync(updatedSubDistrict);
-                    }
-                    
-                    totalProcessed++;
-                }
-                
-                await _subDistrictsRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Encontrados {Count} novos subdistritos", newSubDistricts.Count);
+                await _subDistrictsRepository.AddRangeAsync(newSubDistricts);
             }
 
-            _logger.LogInformation("Sincronização de subdistritos concluída com sucesso. Processados {Count} subdistritos", totalProcessed);
+            await _subDistrictsRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sincronização de subdistritos concluída com sucesso. Processados {Count} subdistritos", newSubDistricts.Count);
         }
         catch (Exception ex)
         {
