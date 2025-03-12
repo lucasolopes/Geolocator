@@ -41,6 +41,15 @@ public class StateRepository(GeolocatorDbContext context) : IStateRepository
         return await _context.States.FindAsync(id);
     }
 
+    public async Task<List<State>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.States
+            .Where(state => ids.Contains(state.Id))
+            .Include(state => state.Region)
+            .Include(state => state.Mesoregions)
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(State entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

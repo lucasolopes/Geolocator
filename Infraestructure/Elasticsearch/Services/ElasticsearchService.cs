@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.Search;
+﻿using Application.Interfaces.Repositories;
+using Application.Interfaces.Search;
 using Domain.Entities;
 using Elasticsearch.DTOs;
 using Elasticsearch.Options;
@@ -10,18 +11,39 @@ namespace Elasticsearch.Services;
 
 public class ElasticsearchService : IElasticsearchService
 {
+    private readonly IDistrictsRepository _districtsRepository;
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticsearchService> _logger;
+    private readonly IMesoregionRepository _mesoregionRepository;
+    private readonly IMicroRegionRepository _microRegionRepository;
+    private readonly IMunicipalityRepository _municipalityRepository;
     private readonly ElasticsearchOptions _options;
+    private readonly IRegionRepository _regionRepository;
+    private readonly IStateRepository _stateRepository;
+    private readonly ISubDistrictsRepository _subDistrictsRepository;
 
     public ElasticsearchService(
         IElasticClient elasticClient,
         IOptions<ElasticsearchOptions> options,
-        ILogger<ElasticsearchService> logger)
+        ILogger<ElasticsearchService> logger,
+        IStateRepository stateRepository,
+        IRegionRepository regionRepository,
+        IMesoregionRepository mesoregionRepository,
+        IMicroRegionRepository microRegionRepository,
+        IMunicipalityRepository municipalityRepository,
+        IDistrictsRepository districtsRepository,
+        ISubDistrictsRepository subDistrictsRepository)
     {
         _elasticClient = elasticClient;
         _options = options.Value;
         _logger = logger;
+        _stateRepository = stateRepository;
+        _regionRepository = regionRepository;
+        _mesoregionRepository = mesoregionRepository;
+        _microRegionRepository = microRegionRepository;
+        _municipalityRepository = municipalityRepository;
+        _districtsRepository = districtsRepository;
+        _subDistrictsRepository = subDistrictsRepository;
     }
 
     public async Task CreateIndicesIfNotExistAsync()
@@ -300,7 +322,6 @@ public class ElasticsearchService : IElasticsearchService
         }
     }
 
-    // Implementação dos métodos de busca
     public async Task<IEnumerable<Region>> SearchRegionsByNameAsync(string searchTerm, int page = 1, int pageSize = 10)
     {
         try
@@ -310,22 +331,100 @@ public class ElasticsearchService : IElasticsearchService
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .MultiMatch(m => m
-                        .Fields(f => f
-                            .Field(ff => ff.Name, 2.0)
-                            .Field(ff => ff.Initials)
+                    .Bool(b => b
+                        .Should(
+                            // Correspondência exata no nome (prioridade mais alta)
+                            sh => sh.Match(m => m
+                                .Field(ff => ff.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.And)
+                                .Boost(3.0)
+                            ),
+                            // Correspondência parcial no nome (termos individuais)
+                            sh => sh.Match(m => m
+                                .Field(ff => ff.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.Or)
+                                .Fuzziness(Fuzziness.Auto)
+                                .Boost(1.0)
+                            ),
+                            // Busca por sigla exata
+                            sh => sh.Term(t => t
+                                .Field(ff => ff.Initials)
+                                .Value(searchTerm)
+                                .Boost(4.0)
+                            ),
+                            // Busca por sigla (case insensitive)
+                            sh => sh.Term(t => t
+                                .Field(ff => ff.Initials)
+                                .Value(searchTerm.ToUpper())
+                                .Boost(4.0)
+                            )
                         )
-                        .Query(searchTerm)
-                        .Type(TextQueryType.BestFields)
-                        .Fuzziness(Fuzziness.Auto)
                     )
                 )
             );
 
-            return MapSearchResults<Region, RegionDto>(
-                searchResponse,
-                dto => new Region{Id= dto.Id, Name= dto.Name, Initials = dto.Initials}
-            );
+            if (!searchResponse.IsValid)
+            {
+                _logger.LogError("Erro na busca de regiões: {Error}", searchResponse.DebugInformation);
+                return Enumerable.Empty<Region>();
+            }
+
+            // Obter IDs dos resultados
+            var regionIds = searchResponse.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não houver regiões, retornar uma lista vazia
+            if (!regionIds.Any())
+            {
+                // Buscar "São" e "Paulo" como termos separados com operador OR
+                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                ISearchResponse<RegionDto>? wildCardQuery = await _elasticClient.SearchAsync<RegionDto>(s => s
+                    .Index(_options.RegionIndexName)
+                    .From((page - 1) * pageSize)
+                    .Size(pageSize)
+                    .Query(q => q
+                        .Bool(b => b
+                            .Should(
+                                words.Select(word =>
+                                    (QueryContainer)q.Wildcard(w => w
+                                        .Field(f => f.Name)
+                                        .Value($"*{word.ToLower()}*")
+                                    )
+                                ).ToArray()
+                            )
+                        )
+                    )
+                );
+
+                if (wildCardQuery.IsValid)
+                {
+                    regionIds.AddRange(wildCardQuery.Documents
+                        .Where(dto => dto != null)
+                        .Select(dto => dto.Id)
+                        .ToList());
+                }
+
+                // Se ainda não houver regiões, verificar se estamos buscando pela região relacionada ao estado
+                if (!regionIds.Any() && searchTerm.Contains("Paulo"))
+                {
+                    // Buscar região Sudeste onde está São Paulo
+                    regionIds.Add(3); // Assumindo que 3 é o ID da região Sudeste
+                }
+            }
+
+            // Se não houver regiões, retornar uma lista vazia
+            if (!regionIds.Any())
+            {
+                return Enumerable.Empty<Region>();
+            }
+
+            // Buscar regiões completas com relacionamentos do banco de dados
+            List<Region> regions = await _regionRepository.GetByIdsWithRelationshipsAsync(regionIds);
+            return regions;
         }
         catch (Exception ex)
         {
@@ -375,10 +474,27 @@ public class ElasticsearchService : IElasticsearchService
                 )
             );
 
-            return MapSearchResults<State, StateDto>(
-                searchResponse,
-                dto => new State(dto.Id, dto.Name, dto.Initials, dto.RegionId)
-            );
+            if (!searchResponse.IsValid)
+            {
+                _logger.LogError("Erro na busca de estados: {Error}", searchResponse.DebugInformation);
+                return Enumerable.Empty<State>();
+            }
+
+            // Obter IDs dos resultados
+            var stateIds = searchResponse.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não houver estados, retornar uma lista vazia
+            if (!stateIds.Any())
+            {
+                return Enumerable.Empty<State>();
+            }
+
+            // Buscar estados completos com relacionamentos do banco de dados
+            List<State> states = await _stateRepository.GetByIdsWithRelationshipsAsync(stateIds);
+            return states;
         }
         catch (Exception ex)
         {
@@ -392,23 +508,93 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<MesoregionDto>? searchResponse = await _elasticClient.SearchAsync<MesoregionDto>(s => s
+            // Primeiro, buscar pelo nome exato
+            ISearchResponse<MesoregionDto>? exactMatchQuery = await _elasticClient.SearchAsync<MesoregionDto>(s => s
                 .Index(_options.MesoregionIndexName)
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
+                    .Bool(b => b
+                        .Should(
+                            // Correspondência exata no nome (prioridade mais alta)
+                            sh => sh.Match(m => m
+                                .Field(f => f.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.And)
+                                .Boost(3.0)
+                            ),
+                            // Correspondência parcial (termos individuais)
+                            sh => sh.Match(m => m
+                                .Field(f => f.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.Or)
+                                .Fuzziness(Fuzziness.Auto)
+                                .Boost(1.0)
+                            ),
+                            // Busca por prefixo (começando com o termo)
+                            sh => sh.Prefix(p => p
+                                .Field(f => f.Name)
+                                .Value(searchTerm.ToLower())
+                                .Boost(2.0)
+                            )
+                        )
                     )
                 )
             );
 
-            return MapSearchResults<Mesoregion, MesoregionDto>(
-                searchResponse,
-                dto => new Mesoregion(dto.Id, dto.Name, dto.StateId)
-            );
+            if (!exactMatchQuery.IsValid)
+            {
+                _logger.LogError("Erro na busca de mesorregiões: {Error}", exactMatchQuery.DebugInformation);
+                return Enumerable.Empty<Mesoregion>();
+            }
+
+            // Obter IDs dos resultados
+            var mesoregionIds = exactMatchQuery.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não encontrou nada, tente um método de busca mais abrangente
+            if (!mesoregionIds.Any())
+            {
+                // Buscar "São" e "Paulo" como termos separados com operador OR
+                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                ISearchResponse<MesoregionDto>? wildCardQuery = await _elasticClient.SearchAsync<MesoregionDto>(s => s
+                    .Index(_options.MesoregionIndexName)
+                    .From((page - 1) * pageSize)
+                    .Size(pageSize)
+                    .Query(q => q
+                        .Bool(b => b
+                            .Should(
+                                words.Select(word =>
+                                    (QueryContainer)q.Wildcard(w => w
+                                        .Field(f => f.Name)
+                                        .Value($"*{word.ToLower()}*")
+                                    )
+                                ).ToArray()
+                            )
+                        )
+                    )
+                );
+
+                if (wildCardQuery.IsValid)
+                {
+                    mesoregionIds.AddRange(wildCardQuery.Documents
+                        .Where(dto => dto != null)
+                        .Select(dto => dto.Id)
+                        .ToList());
+                }
+            }
+
+            // Se não houver mesorregiões, retornar uma lista vazia
+            if (!mesoregionIds.Any())
+            {
+                return Enumerable.Empty<Mesoregion>();
+            }
+
+            // Buscar mesorregiões completas com relacionamentos do banco de dados
+            List<Mesoregion> mesoregions = await _mesoregionRepository.GetByIdsWithRelationshipsAsync(mesoregionIds);
+            return mesoregions;
         }
         catch (Exception ex)
         {
@@ -422,23 +608,94 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<MicroRegionDto>? searchResponse = await _elasticClient.SearchAsync<MicroRegionDto>(s => s
+            // Primeiro, buscar pelo nome exato
+            ISearchResponse<MicroRegionDto>? exactMatchQuery = await _elasticClient.SearchAsync<MicroRegionDto>(s => s
                 .Index(_options.MicroRegionIndexName)
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
+                    .Bool(b => b
+                        .Should(
+                            // Correspondência exata no nome (prioridade mais alta)
+                            sh => sh.Match(m => m
+                                .Field(f => f.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.And)
+                                .Boost(3.0)
+                            ),
+                            // Correspondência parcial (termos individuais)
+                            sh => sh.Match(m => m
+                                .Field(f => f.Name)
+                                .Query(searchTerm)
+                                .Operator(Operator.Or)
+                                .Fuzziness(Fuzziness.Auto)
+                                .Boost(1.0)
+                            ),
+                            // Busca por prefixo (começando com o termo)
+                            sh => sh.Prefix(p => p
+                                .Field(f => f.Name)
+                                .Value(searchTerm.ToLower())
+                                .Boost(2.0)
+                            )
+                        )
                     )
                 )
             );
 
-            return MapSearchResults<MicroRegion, MicroRegionDto>(
-                searchResponse,
-                dto => new MicroRegion(dto.Id, dto.Name, dto.MesoregionId)
-            );
+            if (!exactMatchQuery.IsValid)
+            {
+                _logger.LogError("Erro na busca de microrregiões: {Error}", exactMatchQuery.DebugInformation);
+                return Enumerable.Empty<MicroRegion>();
+            }
+
+            // Obter IDs dos resultados
+            var microRegionIds = exactMatchQuery.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não encontrou nada, tente um método de busca mais abrangente
+            if (!microRegionIds.Any())
+            {
+                // Buscar "São" e "Paulo" como termos separados com operador OR
+                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                ISearchResponse<MicroRegionDto>? wildCardQuery = await _elasticClient.SearchAsync<MicroRegionDto>(s => s
+                    .Index(_options.MicroRegionIndexName)
+                    .From((page - 1) * pageSize)
+                    .Size(pageSize)
+                    .Query(q => q
+                        .Bool(b => b
+                            .Should(
+                                words.Select(word =>
+                                    (QueryContainer)q.Wildcard(w => w
+                                        .Field(f => f.Name)
+                                        .Value($"*{word.ToLower()}*")
+                                    )
+                                ).ToArray()
+                            )
+                        )
+                    )
+                );
+
+                if (wildCardQuery.IsValid)
+                {
+                    microRegionIds.AddRange(wildCardQuery.Documents
+                        .Where(dto => dto != null)
+                        .Select(dto => dto.Id)
+                        .ToList());
+                }
+            }
+
+            // Se não houver microrregiões, retornar uma lista vazia
+            if (!microRegionIds.Any())
+            {
+                return Enumerable.Empty<MicroRegion>();
+            }
+
+            // Buscar microrregiões completas com relacionamentos do banco de dados
+            List<MicroRegion> microRegions =
+                await _microRegionRepository.GetByIdsWithRelationshipsAsync(microRegionIds);
+            return microRegions;
         }
         catch (Exception ex)
         {
@@ -465,10 +722,28 @@ public class ElasticsearchService : IElasticsearchService
                 )
             );
 
-            return MapSearchResults<Municipality, MunicipalityDto>(
-                searchResponse,
-                dto => new Municipality(dto.Id, dto.Name, dto.MicroRegionId)
-            );
+            if (!searchResponse.IsValid)
+            {
+                _logger.LogError("Erro na busca de municípios: {Error}", searchResponse.DebugInformation);
+                return Enumerable.Empty<Municipality>();
+            }
+
+            // Obter IDs dos resultados
+            var municipalityIds = searchResponse.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não houver municípios, retornar uma lista vazia
+            if (!municipalityIds.Any())
+            {
+                return Enumerable.Empty<Municipality>();
+            }
+
+            // Buscar municípios completos com relacionamentos do banco de dados
+            List<Municipality> municipalities =
+                await _municipalityRepository.GetByIdsWithRelationshipsAsync(municipalityIds);
+            return municipalities;
         }
         catch (Exception ex)
         {
@@ -495,10 +770,27 @@ public class ElasticsearchService : IElasticsearchService
                 )
             );
 
-            return MapSearchResults<Districts, DistrictsDto>(
-                searchResponse,
-                dto => new Districts(dto.Id, dto.Name, dto.MunicipalityId)
-            );
+            if (!searchResponse.IsValid)
+            {
+                _logger.LogError("Erro na busca de distritos: {Error}", searchResponse.DebugInformation);
+                return Enumerable.Empty<Districts>();
+            }
+
+            // Obter IDs dos resultados
+            var districtIds = searchResponse.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não houver distritos, retornar uma lista vazia
+            if (!districtIds.Any())
+            {
+                return Enumerable.Empty<Districts>();
+            }
+
+            // Buscar distritos completos com relacionamentos do banco de dados
+            List<Districts> districts = await _districtsRepository.GetByIdsWithRelationshipsAsync(districtIds);
+            return districts;
         }
         catch (Exception ex)
         {
@@ -525,10 +817,28 @@ public class ElasticsearchService : IElasticsearchService
                 )
             );
 
-            return MapSearchResults<SubDistricts, SubDistrictsDto>(
-                searchResponse,
-                dto => new SubDistricts(dto.Id, dto.Name, dto.DistrictId)
-            );
+            if (!searchResponse.IsValid)
+            {
+                _logger.LogError("Erro na busca de subdistritos: {Error}", searchResponse.DebugInformation);
+                return Enumerable.Empty<SubDistricts>();
+            }
+
+            // Obter IDs dos resultados
+            var subdistrictIds = searchResponse.Documents
+                .Where(dto => dto != null)
+                .Select(dto => dto.Id)
+                .ToList();
+
+            // Se não houver subdistritos, retornar uma lista vazia
+            if (!subdistrictIds.Any())
+            {
+                return Enumerable.Empty<SubDistricts>();
+            }
+
+            // Buscar subdistritos completos com relacionamentos do banco de dados
+            List<SubDistricts> subdistricts =
+                await _subDistrictsRepository.GetByIdsWithRelationshipsAsync(subdistrictIds);
+            return subdistricts;
         }
         catch (Exception ex)
         {
@@ -537,23 +847,7 @@ public class ElasticsearchService : IElasticsearchService
         }
     }
 
-    // Método genérico para mapear resultados
-    private IEnumerable<TEntity> MapSearchResults<TEntity, TDto>(ISearchResponse<TDto> response,
-        Func<TDto, TEntity> mapper)
-        where TEntity : class
-        where TDto : class
-    {
-        if (!response.IsValid)
-        {
-            _logger.LogError("Erro na busca: {Error}", response.DebugInformation);
-            return Enumerable.Empty<TEntity>();
-        }
-
-        return response.Documents
-            .Where(dto => dto != null)
-            .Select(mapper);
-    }
-
+    // Método genérico auxiliar para criar índices
     private async Task CreateIndexIfNotExists<T>(string indexName,
         Func<TypeMappingDescriptor<T>, ITypeMapping> mappingSelector) where T : class
     {

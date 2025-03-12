@@ -49,6 +49,15 @@ public class DistrictsRepository(GeolocatorDbContext context) : IDistrictsReposi
         await _context.Districts.AddRangeAsync(newDistricts);
     }
 
+    public async Task<List<Districts>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.Districts
+            .Where(district => ids.Contains(district.Id))
+            .Include(district => district.Municipality)
+            .Include(district => district.SubDistricts)
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(Districts entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

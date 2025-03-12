@@ -41,6 +41,13 @@ public class RegionRepository(GeolocatorDbContext context) : IRegionRepository
         return await _context.Regions.FindAsync(id);
     }
 
+    public async Task<List<Region>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.Regions
+            .Where(region => ids.Contains(region.Id))
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(Region entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

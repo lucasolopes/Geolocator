@@ -48,6 +48,14 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
             .ToListAsync();
     }
 
+    public async Task<List<SubDistricts>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.Set<SubDistricts>()
+            .Where(subDistrict => ids.Contains(subDistrict.Id))
+            .Include(subDistrict => subDistrict.District) 
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(SubDistricts entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

@@ -48,6 +48,15 @@ public class MunicipalityRepository(GeolocatorDbContext context) : IMunicipality
             .ToListAsync();
     }
 
+    public async Task<List<Municipality>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.Municipalities
+            .Where(municipality => ids.Contains(municipality.Id))
+            .Include(municipality => municipality.MicroRegion) 
+            .Include(municipality => municipality.Districts)
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(Municipality entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

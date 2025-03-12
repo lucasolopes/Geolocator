@@ -48,6 +48,15 @@ public class MicroRegionRepository(GeolocatorDbContext context) : IMicroRegionRe
             .ToListAsync();
     }
 
+    public async Task<List<MicroRegion>> GetByIdsWithRelationshipsAsync(List<long> ids)
+    {
+        return await _context.MicroRegions
+            .Where(microRegion => ids.Contains(microRegion.Id))
+            .Include(microRegion => microRegion.Mesoregion)  
+            .Include(microRegion => microRegion.Municipalities)  
+            .ToListAsync();
+    }
+
     public Task UpdateAsync(MicroRegion entity)
     {
         _context.Entry(entity).State = EntityState.Modified;

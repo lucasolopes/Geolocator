@@ -100,7 +100,6 @@ public class SearchLocationsQueryHandler : IRequestHandler<SearchLocationsQuery,
                 }, cancellationToken));
             }
 
-            // Aguarda a conclusão de todas as buscas
             await Task.WhenAll(tasks);
 
             _logger.LogInformation("Busca concluída para o termo '{SearchTerm}'. " +

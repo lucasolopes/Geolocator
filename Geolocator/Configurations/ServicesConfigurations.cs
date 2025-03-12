@@ -56,5 +56,7 @@ public static class ServiceConfiguration
         });
 
         services.AddScoped<IElasticsearchService, ElasticsearchService>();
+
+
     }
 }
