@@ -331,36 +331,10 @@ public class ElasticsearchService : IElasticsearchService
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Bool(b => b
-                        .Should(
-                            // Correspondência exata no nome (prioridade mais alta)
-                            sh => sh.Match(m => m
-                                .Field(ff => ff.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.And)
-                                .Boost(3.0)
-                            ),
-                            // Correspondência parcial no nome (termos individuais)
-                            sh => sh.Match(m => m
-                                .Field(ff => ff.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.Or)
-                                .Fuzziness(Fuzziness.Auto)
-                                .Boost(1.0)
-                            ),
-                            // Busca por sigla exata
-                            sh => sh.Term(t => t
-                                .Field(ff => ff.Initials)
-                                .Value(searchTerm)
-                                .Boost(4.0)
-                            ),
-                            // Busca por sigla (case insensitive)
-                            sh => sh.Term(t => t
-                                .Field(ff => ff.Initials)
-                                .Value(searchTerm.ToUpper())
-                                .Boost(4.0)
-                            )
-                        )
+                    .Match(m => m
+                        .Field(f => f.Name)
+                        .Query(searchTerm)
+                        .Fuzziness(Fuzziness.Auto)
                     )
                 )
             );
@@ -387,15 +361,10 @@ public class ElasticsearchService : IElasticsearchService
                     .From((page - 1) * pageSize)
                     .Size(pageSize)
                     .Query(q => q
-                        .Bool(b => b
-                            .Should(
-                                words.Select(word =>
-                                    (QueryContainer)q.Wildcard(w => w
-                                        .Field(f => f.Name)
-                                        .Value($"*{word.ToLower()}*")
-                                    )
-                                ).ToArray()
-                            )
+                        .Match(m => m
+                            .Field(f => f.Name)
+                            .Query(searchTerm)
+                            .Fuzziness(Fuzziness.Auto)
                         )
                     )
                 );
@@ -442,44 +411,10 @@ public class ElasticsearchService : IElasticsearchService
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Bool(b => b
-                        .Should(
-                            // Busca por nome
-                            sh => sh.Match(m => m
-                                .Field(f => f.Name)
-                                .Query(searchTerm)
-                                .Fuzziness(Fuzziness.Auto)
-                                .Boost(1.0)
-                            ),
-                            // Busca por sigla exata (case sensitive)
-                            sh => sh.Term(t => t
-                                .Field(f => f.Initials)
-                                .Value(searchTerm)
-                                .Boost(2.0)
-                            ),
-                            // Busca por sigla (case insensitive)
-                            sh => sh.Term(t => t
-                                .Field(f => f.Initials)
-                                .Value(searchTerm.ToUpper())
-                                .Boost(2.0)
-                            ),
-                            // Busca por sigla minúscula
-                            sh => sh.Term(t => t
-                                .Field(f => f.Initials)
-                                .Value(searchTerm.ToLower())
-                                .Boost(2.0)
-                            ),
-                            sh => sh.Prefix(p => p
-                                .Field(f => f.Name)
-                                .Value(searchTerm.ToLower())
-                                .Boost(2.0)
-                            ),
-                            sh => sh.Wildcard(w => w
-                                .Field(f => f.Name)
-                                .Value($"*{searchTerm.ToLower()}*")
-                                .Boost(1.0)
-                            )
-                        )
+                    .Match(m => m
+                        .Field(f => f.Name)
+                        .Query(searchTerm)
+                        .Fuzziness(Fuzziness.Auto)
                     )
                 )
             );
@@ -524,30 +459,10 @@ public class ElasticsearchService : IElasticsearchService
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Bool(b => b
-                        .Should(
-                            // Correspondência exata no nome (prioridade mais alta)
-                            sh => sh.Match(m => m
-                                .Field(f => f.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.And)
-                                .Boost(3.0)
-                            ),
-                            // Correspondência parcial (termos individuais)
-                            sh => sh.Match(m => m
-                                .Field(f => f.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.Or)
-                                .Fuzziness(Fuzziness.Auto)
-                                .Boost(1.0)
-                            ),
-                            // Busca por prefixo (começando com o termo)
-                            sh => sh.Prefix(p => p
-                                .Field(f => f.Name)
-                                .Value(searchTerm.ToLower())
-                                .Boost(2.0)
-                            )
-                        )
+                    .Match(m => m
+                        .Field(f => f.Name)
+                        .Query(searchTerm)
+                        .Fuzziness(Fuzziness.Auto)
                     )
                 )
             );
@@ -574,15 +489,10 @@ public class ElasticsearchService : IElasticsearchService
                     .From((page - 1) * pageSize)
                     .Size(pageSize)
                     .Query(q => q
-                        .Bool(b => b
-                            .Should(
-                                words.Select(word =>
-                                    (QueryContainer)q.Wildcard(w => w
-                                        .Field(f => f.Name)
-                                        .Value($"*{word.ToLower()}*")
-                                    )
-                                ).ToArray()
-                            )
+                        .Match(m => m
+                            .Field(f => f.Name)
+                            .Query(searchTerm)
+                            .Fuzziness(Fuzziness.Auto)
                         )
                     )
                 );
@@ -624,30 +534,10 @@ public class ElasticsearchService : IElasticsearchService
                 .From((page - 1) * pageSize)
                 .Size(pageSize)
                 .Query(q => q
-                    .Bool(b => b
-                        .Should(
-                            // Correspondência exata no nome (prioridade mais alta)
-                            sh => sh.Match(m => m
-                                .Field(f => f.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.And)
-                                .Boost(3.0)
-                            ),
-                            // Correspondência parcial (termos individuais)
-                            sh => sh.Match(m => m
-                                .Field(f => f.Name)
-                                .Query(searchTerm)
-                                .Operator(Operator.Or)
-                                .Fuzziness(Fuzziness.Auto)
-                                .Boost(1.0)
-                            ),
-                            // Busca por prefixo (começando com o termo)
-                            sh => sh.Prefix(p => p
-                                .Field(f => f.Name)
-                                .Value(searchTerm.ToLower())
-                                .Boost(2.0)
-                            )
-                        )
+                    .Match(m => m
+                        .Field(f => f.Name)
+                        .Query(searchTerm)
+                        .Fuzziness(Fuzziness.Auto)
                     )
                 )
             );
@@ -674,15 +564,10 @@ public class ElasticsearchService : IElasticsearchService
                     .From((page - 1) * pageSize)
                     .Size(pageSize)
                     .Query(q => q
-                        .Bool(b => b
-                            .Should(
-                                words.Select(word =>
-                                    (QueryContainer)q.Wildcard(w => w
-                                        .Field(f => f.Name)
-                                        .Value($"*{word.ToLower()}*")
-                                    )
-                                ).ToArray()
-                            )
+                        .Match(m => m
+                            .Field(f => f.Name)
+                            .Query(searchTerm)
+                            .Fuzziness(Fuzziness.Auto)
                         )
                     )
                 );
@@ -871,16 +756,21 @@ public class ElasticsearchService : IElasticsearchService
                     .NumberOfShards(1)
                     .NumberOfReplicas(0)
                     .RefreshInterval("30s")
+                    .Setting("index.max_ngram_diff", 13)
                     .Analysis(a => a
                         .Analyzers(aa => aa
                             .Custom("brazilian", ca => ca
                                 .Tokenizer("standard")
-                                .Filters("lowercase", "brazilian_stemmer", "asciifolding")
+                                .Filters("lowercase", "brazilian_stemmer", "asciifolding", "ngram_filter")
                             )
                         )
                         .TokenFilters(tf => tf
                             .Stemmer("brazilian_stemmer", st => st
                                 .Language("brazilian")
+                            )
+                            .NGram("ngram_filter", ng => ng
+                                .MinGram(2)
+                                .MaxGram(10)
                             )
                         )
                     )
