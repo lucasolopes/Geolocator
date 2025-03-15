@@ -34,13 +34,26 @@ services:
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx3g"
       - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+      - index.codec=best_compression
+      - indices.fielddata.cache.size=20%
+      - thread_pool.write.size=4
+      - indices.memory.index_buffer_size=30%
+      - thread_pool.write.queue_size=100
+      - thread_pool.search.queue_size=200
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - geolocator-network
 

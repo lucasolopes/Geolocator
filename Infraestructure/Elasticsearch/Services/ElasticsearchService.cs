@@ -858,6 +858,9 @@ public class ElasticsearchService : IElasticsearchService
 
             CreateIndexResponse? createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
                 .Settings(s => s
+                    .NumberOfShards(1)
+                    .NumberOfReplicas(0)
+                    .RefreshInterval("30s")
                     .Analysis(a => a
                         .Analyzers(aa => aa
                             .Custom("brazilian", ca => ca
