@@ -1,7 +1,4 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using Application.DTOs;
-using Application.Interfaces.Services;
+﻿using Application.Interfaces.Services;
 using Domain.Entities;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -21,35 +18,18 @@ public class IbgeService : IIbgeService
         _httpClient.BaseAddress = new Uri("https://servicodados.ibge.gov.br/api/v1/");
     }
 
-    private async Task<List<dynamic>?> GetJsonAsync(string url)
-    {
-        try
-        {
-            string response = await _httpClient.GetStringAsync(url);
-            if (response == null)
-            {
-                return new List<dynamic>();
-            }
-            return JsonConvert.DeserializeObject<List<dynamic>>(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao buscar dados do IBGE");
-            throw;
-        }
-    }
-
     public async Task<List<Region>> GetRegionsAsync()
     {
         try
         {
             List<dynamic>? json = await GetJsonAsync("localidades/regioes");
 
-            return json.Select(e => new Region{
+            return json.Select(e => new Region
+            {
                 Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 Initials = e["sigla"].ToString()
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -64,12 +44,13 @@ public class IbgeService : IIbgeService
         {
             List<dynamic>? json = await GetJsonAsync("localidades/estados");
 
-            return json.Select(e => new State{
-                Id = int.Parse(e["id"].ToString()), 
+            return json.Select(e => new State
+            {
+                Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
-                Initials = e["sigla"].ToString(), 
+                Initials = e["sigla"].ToString(),
                 RegionId = int.Parse(e["regiao"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -84,11 +65,12 @@ public class IbgeService : IIbgeService
         {
             List<dynamic>? json = await GetJsonAsync("localidades/mesorregioes");
 
-            return json.Select(e => new Mesoregion{
+            return json.Select(e => new Mesoregion
+            {
                 Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 StateId = int.Parse(e["UF"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -103,11 +85,12 @@ public class IbgeService : IIbgeService
         {
             List<dynamic>? json = await GetJsonAsync("localidades/microrregioes");
 
-            return json.Select(e => new MicroRegion{
+            return json.Select(e => new MicroRegion
+            {
                 Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 MesoregionId = int.Parse(e["mesorregiao"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -122,11 +105,12 @@ public class IbgeService : IIbgeService
         {
             List<dynamic>? json = await GetJsonAsync("localidades/municipios");
 
-            return json.Select(e => new Municipality{
+            return json.Select(e => new Municipality
+            {
                 Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 MicroRegionId = int.Parse(e["microrregiao"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -139,13 +123,14 @@ public class IbgeService : IIbgeService
     {
         try
         {
-            List<dynamic>? json = await GetJsonAsync($"localidades/distritos");
+            List<dynamic>? json = await GetJsonAsync("localidades/distritos");
 
-            return json.Select(e => new Districts{
+            return json.Select(e => new Districts
+            {
                 Id = int.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 MunicipalityId = int.Parse(e["municipio"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -158,17 +143,37 @@ public class IbgeService : IIbgeService
     {
         try
         {
-           List<dynamic>? json = await GetJsonAsync($"localidades/subdistritos");
+            List<dynamic>? json = await GetJsonAsync("localidades/subdistritos");
 
-            return json.Select(e => new SubDistricts{
+            return json.Select(e => new SubDistricts
+            {
                 Id = long.Parse(e["id"].ToString()),
                 Name = e["nome"].ToString(),
                 DistrictId = int.Parse(e["distrito"]["id"].ToString())
-                }).ToList();
+            }).ToList();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao buscar subdistritos do IBGE para o distrito");
+            throw;
+        }
+    }
+
+    private async Task<List<dynamic>?> GetJsonAsync(string url)
+    {
+        try
+        {
+            string response = await _httpClient.GetStringAsync(url);
+            if (response == null)
+            {
+                return new List<dynamic>();
+            }
+
+            return JsonConvert.DeserializeObject<List<dynamic>>(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar dados do IBGE");
             throw;
         }
     }

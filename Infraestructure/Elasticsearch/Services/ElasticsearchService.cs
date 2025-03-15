@@ -468,6 +468,16 @@ public class ElasticsearchService : IElasticsearchService
                                 .Field(f => f.Initials)
                                 .Value(searchTerm.ToLower())
                                 .Boost(2.0)
+                            ),
+                            sh => sh.Prefix(p => p
+                                .Field(f => f.Name)
+                                .Value(searchTerm.ToLower())
+                                .Boost(2.0)
+                            ),
+                            sh => sh.Wildcard(w => w
+                                .Field(f => f.Name)
+                                .Value($"*{searchTerm.ToLower()}*")
+                                .Boost(1.0)
                             )
                         )
                     )
