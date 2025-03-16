@@ -25,31 +25,23 @@ public class IbgeSyncController : ControllerBase
         {
             _logger.LogInformation("Iniciando sincronização manual dos dados do IBGE");
 
-            // Sincroniza regiões
             await _mediator.Send(new SyncRegionsCommand());
 
-            // Sincroniza estados
             await _mediator.Send(new SyncStatesCommand());
 
-            // Sincroniza mesorregiões
             await _mediator.Send(new SyncMesoregionsCommand());
 
-            // Sincroniza microrregiões
             await _mediator.Send(new SyncMicroregionsCommand());
 
-            // Sincroniza municípios
             await _mediator.Send(new SyncMunicipalitiesCommand());
 
-            // Sincroniza distritos
             await _mediator.Send(new SyncDistrictsCommand());
 
-            // Sincroniza subdistritos
             await _mediator.Send(new SyncSubDistrictsCommand());
 
             _logger.LogInformation(
                 "Sincronização manual do IBGE concluída com sucesso. Sincronizando com Elasticsearch...");
 
-            // Sincroniza com o Elasticsearch
             SyncElasticsearchResult elasticsearchResult = await _mediator.Send(new SyncElasticsearchCommand());
 
             return Ok(new

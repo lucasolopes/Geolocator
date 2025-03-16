@@ -11,7 +11,6 @@ public static class JobsConfiguration
         {
             q.UseMicrosoftDependencyInjectionJobFactory();
 
-            // Job para sincronização com o IBGE e Elasticsearch
             var ibgeJobKey = new JobKey("IbgeSyncJob");
             q.AddJob<IbgeSyncJob>(opts => opts.WithIdentity(ibgeJobKey));
 
@@ -19,7 +18,7 @@ public static class JobsConfiguration
                 .ForJob(ibgeJobKey)
                 .WithIdentity("IbgeSyncTrigger")
                 .StartNow()
-                .WithCronSchedule("0 0 1 1 * ?")); // Executar às 00:00 do primeiro dia de cada mês
+                .WithCronSchedule("0 0 1 1 * ?"));
         });
 
         services.AddQuartzHostedService(options =>

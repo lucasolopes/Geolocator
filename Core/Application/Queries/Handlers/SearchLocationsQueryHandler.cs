@@ -25,7 +25,6 @@ public class SearchLocationsQueryHandler : IRequestHandler<SearchLocationsQuery,
 
         try
         {
-            // Resultados padrão vazios
             IEnumerable<Region> regions = Enumerable.Empty<Region>();
             IEnumerable<State> states = Enumerable.Empty<State>();
             IEnumerable<Mesoregion> mesoregions = Enumerable.Empty<Mesoregion>();
@@ -34,7 +33,6 @@ public class SearchLocationsQueryHandler : IRequestHandler<SearchLocationsQuery,
             IEnumerable<Districts> districts = Enumerable.Empty<Districts>();
             IEnumerable<SubDistricts> subDistricts = Enumerable.Empty<SubDistricts>();
 
-            // Executa as buscas SEQUENCIALMENTE para evitar problemas de concorrência
             if (request.IncludeRegions)
             {
                 regions = await _elasticsearchService.SearchRegionsByNameAsync(

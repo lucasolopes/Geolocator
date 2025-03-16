@@ -1,8 +1,10 @@
 ﻿using Application.Interfaces.Search;
+using Domain.Entities;
 using Elasticsearch.Options;
 using Elasticsearch.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Nest;
 
 namespace Elasticsearch.Extensions;
@@ -18,15 +20,15 @@ public static class ElasticsearchExtensions
 
         services.AddSingleton<IElasticClient>(sp =>
         {
-            ElasticsearchOptions options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ElasticsearchOptions>>().Value;
+            ElasticsearchOptions options = sp.GetRequiredService<IOptions<ElasticsearchOptions>>().Value;
             ConnectionSettings? connectionSettings = new ConnectionSettings(new Uri(options.Uri))
-                .DefaultMappingFor<Domain.Entities.Region>(m => m.IndexName(options.RegionIndexName))
-                .DefaultMappingFor<Domain.Entities.State>(m => m.IndexName(options.StateIndexName))
-                .DefaultMappingFor<Domain.Entities.Mesoregion>(m => m.IndexName(options.MesoregionIndexName))
-                .DefaultMappingFor<Domain.Entities.MicroRegion>(m => m.IndexName(options.MicroRegionIndexName))
-                .DefaultMappingFor<Domain.Entities.Municipality>(m => m.IndexName(options.MunicipalityIndexName))
-                .DefaultMappingFor<Domain.Entities.Districts>(m => m.IndexName(options.DistrictIndexName))
-                .DefaultMappingFor<Domain.Entities.SubDistricts>(m => m.IndexName(options.SubDistrictIndexName))
+                .DefaultMappingFor<Region>(m => m.IndexName(options.RegionIndexName))
+                .DefaultMappingFor<State>(m => m.IndexName(options.StateIndexName))
+                .DefaultMappingFor<Mesoregion>(m => m.IndexName(options.MesoregionIndexName))
+                .DefaultMappingFor<MicroRegion>(m => m.IndexName(options.MicroRegionIndexName))
+                .DefaultMappingFor<Municipality>(m => m.IndexName(options.MunicipalityIndexName))
+                .DefaultMappingFor<Districts>(m => m.IndexName(options.DistrictIndexName))
+                .DefaultMappingFor<SubDistricts>(m => m.IndexName(options.SubDistrictIndexName))
                 .EnableDebugMode()
                 .PrettyJson();
 

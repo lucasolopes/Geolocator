@@ -1,5 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;
@@ -12,8 +11,8 @@ public class SyncMicroregionsCommandHandler : IRequestHandler<SyncMicroregionsCo
 {
     private readonly IIbgeService _ibgeService;
     private readonly ILogger<SyncMicroregionsCommandHandler> _logger;
-    private readonly IMicroRegionRepository _microRegionRepository;
     private readonly IMesoregionRepository _mesoregionRepository;
+    private readonly IMicroRegionRepository _microRegionRepository;
 
     public SyncMicroregionsCommandHandler(
         IIbgeService ibgeService,
@@ -47,7 +46,9 @@ public class SyncMicroregionsCommandHandler : IRequestHandler<SyncMicroregionsCo
 
             await _microRegionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de microrregiões concluída com sucesso. Processadas {Count} microrregiões", newMicroregions.Count);
+            _logger.LogInformation(
+                "Sincronização de microrregiões concluída com sucesso. Processadas {Count} microrregiões",
+                newMicroregions.Count);
         }
         catch (Exception ex)
         {

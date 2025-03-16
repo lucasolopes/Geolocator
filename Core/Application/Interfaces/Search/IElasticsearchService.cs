@@ -12,7 +12,7 @@ public interface IElasticsearchService
     Task<bool> IndexMunicipalitiesAsync(IEnumerable<Municipality> municipalities);
     Task<bool> IndexDistrictsAsync(IEnumerable<Districts> districts);
     Task<bool> IndexSubDistrictsAsync(IEnumerable<SubDistricts> subDistricts);
-    
+
     Task<IEnumerable<Region>> SearchRegionsByNameAsync(string searchTerm, int page = 1, int pageSize = 10);
     Task<IEnumerable<State>> SearchStatesByNameAsync(string searchTerm, int page = 1, int pageSize = 10);
     Task<IEnumerable<Mesoregion>> SearchMesoregionsByNameAsync(string searchTerm, int page = 1, int pageSize = 10);

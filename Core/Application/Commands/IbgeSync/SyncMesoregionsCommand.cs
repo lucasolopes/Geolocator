@@ -2,4 +2,4 @@
 
 namespace Application.Commands.IbgeSync;
 
-public record SyncMesoregionsCommand() : IRequest;
+public record SyncMesoregionsCommand : IRequest;

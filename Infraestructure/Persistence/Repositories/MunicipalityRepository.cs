@@ -9,6 +9,7 @@ public class MunicipalityRepository(GeolocatorDbContext context) : IMunicipality
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+
     public async Task<HashSet<long>> GetAllIdsAsync()
     {
         return new HashSet<long>(await _context.Municipalities.Select(m => m.Id).ToListAsync());
@@ -52,7 +53,7 @@ public class MunicipalityRepository(GeolocatorDbContext context) : IMunicipality
     {
         return await _context.Municipalities
             .Where(municipality => ids.Contains(municipality.Id))
-            .Include(municipality => municipality.MicroRegion) 
+            .Include(municipality => municipality.MicroRegion)
             .Include(municipality => municipality.Districts)
             .ToListAsync();
     }

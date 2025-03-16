@@ -5,7 +5,7 @@ public class SubDistricts
     public SubDistricts()
     {
     }
-    
+
     public SubDistricts(long id, string name, long districtId)
     {
         Id = id;
@@ -17,6 +17,5 @@ public class SubDistricts
     public string Name { get; set; } = null!;
     public long DistrictId { get; set; }
 
-    //Relationships
     public Districts District { get; set; } = null!;
 }

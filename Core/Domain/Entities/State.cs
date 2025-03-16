@@ -2,10 +2,8 @@
 
 public class State
 {
-    // Construtor sem parâmetros para desserialização
     public State() { }
 
-    // Construtor para uso normal
     public State(long id, string name, string initials, long regionId)
     {
         Id = id;
@@ -19,7 +17,6 @@ public class State
     public string Initials { get; set; } = null!;
     public long RegionId { get; set; }
 
-    //Relationships
-    public List<Mesoregion> Mesoregions { get; set; } = new List<Mesoregion>();
+    public List<Mesoregion> Mesoregions { get; set; } = new();
     public Region Region { get; set; } = null!;
 }

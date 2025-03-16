@@ -1,5 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;
@@ -47,7 +46,9 @@ public class SyncMesoregionsCommandHandler : IRequestHandler<SyncMesoregionsComm
 
             await _mesoregionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de mesorregiões concluída com sucesso. Processadas {Count} mesorregiões", newMesoregions.Count);
+            _logger.LogInformation(
+                "Sincronização de mesorregiões concluída com sucesso. Processadas {Count} mesorregiões",
+                newMesoregions.Count);
         }
         catch (Exception e)
         {

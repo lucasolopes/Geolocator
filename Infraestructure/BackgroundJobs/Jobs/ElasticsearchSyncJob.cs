@@ -9,15 +9,15 @@ namespace BackgroundJobs.Jobs;
 [DisallowConcurrentExecution]
 public class ElasticsearchSyncJob : IJob
 {
+    private readonly IDistrictsRepository _districtsRepository;
     private readonly IElasticsearchService _elasticsearchService;
-    private readonly IRegionRepository _regionRepository;
-    private readonly IStateRepository _stateRepository;
+    private readonly ILogger<ElasticsearchSyncJob> _logger;
     private readonly IMesoregionRepository _mesoregionRepository;
     private readonly IMicroRegionRepository _microRegionRepository;
     private readonly IMunicipalityRepository _municipalityRepository;
-    private readonly IDistrictsRepository _districtsRepository;
+    private readonly IRegionRepository _regionRepository;
+    private readonly IStateRepository _stateRepository;
     private readonly ISubDistrictsRepository _subDistrictsRepository;
-    private readonly ILogger<ElasticsearchSyncJob> _logger;
 
     public ElasticsearchSyncJob(
         IElasticsearchService elasticsearchService,
@@ -44,54 +44,53 @@ public class ElasticsearchSyncJob : IJob
     public async Task Execute(IJobExecutionContext context)
     {
         _logger.LogInformation("Iniciando sincronização de dados com o Elasticsearch");
-            
+
         try
         {
-            // Certificar que os índices existem
             await _elasticsearchService.CreateIndicesIfNotExistAsync();
-                
-            // Sincronização de regiões
+
             _logger.LogInformation("Sincronizando regiões com o Elasticsearch");
             List<Region> regions = await _regionRepository.GetAllAsync();
             bool regionsResult = await _elasticsearchService.IndexRegionsAsync(regions);
-            _logger.LogInformation("Sincronização de regiões com o Elasticsearch: {Result}", regionsResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de estados
+            _logger.LogInformation("Sincronização de regiões com o Elasticsearch: {Result}",
+                regionsResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando estados com o Elasticsearch");
             List<State> states = await _stateRepository.GetAllAsync();
             bool statesResult = await _elasticsearchService.IndexStatesAsync(states);
-            _logger.LogInformation("Sincronização de estados com o Elasticsearch: {Result}", statesResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de mesorregiões
+            _logger.LogInformation("Sincronização de estados com o Elasticsearch: {Result}",
+                statesResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando mesorregiões com o Elasticsearch");
             List<Mesoregion> mesoregions = await _mesoregionRepository.GetAllAsync();
             bool mesoregionsResult = await _elasticsearchService.IndexMesoregionsAsync(mesoregions);
-            _logger.LogInformation("Sincronização de mesorregiões com o Elasticsearch: {Result}", mesoregionsResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de microrregiões
+            _logger.LogInformation("Sincronização de mesorregiões com o Elasticsearch: {Result}",
+                mesoregionsResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando microrregiões com o Elasticsearch");
             List<MicroRegion> microRegions = await _microRegionRepository.GetAllAsync();
             bool microRegionsResult = await _elasticsearchService.IndexMicroRegionsAsync(microRegions);
-            _logger.LogInformation("Sincronização de microrregiões com o Elasticsearch: {Result}", microRegionsResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de municípios
+            _logger.LogInformation("Sincronização de microrregiões com o Elasticsearch: {Result}",
+                microRegionsResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando municípios com o Elasticsearch");
             List<Municipality> municipalities = await _municipalityRepository.GetAllAsync();
             bool municipalitiesResult = await _elasticsearchService.IndexMunicipalitiesAsync(municipalities);
-            _logger.LogInformation("Sincronização de municípios com o Elasticsearch: {Result}", municipalitiesResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de distritos
+            _logger.LogInformation("Sincronização de municípios com o Elasticsearch: {Result}",
+                municipalitiesResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando distritos com o Elasticsearch");
             List<Districts> districts = await _districtsRepository.GetAllAsync();
             bool districtsResult = await _elasticsearchService.IndexDistrictsAsync(districts);
-            _logger.LogInformation("Sincronização de distritos com o Elasticsearch: {Result}", districtsResult ? "Sucesso" : "Falha");
-                
-            // Sincronização de subdistritos
+            _logger.LogInformation("Sincronização de distritos com o Elasticsearch: {Result}",
+                districtsResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronizando subdistritos com o Elasticsearch");
             List<SubDistricts> subDistricts = await _subDistrictsRepository.GetAllAsync();
             bool subDistrictsResult = await _elasticsearchService.IndexSubDistrictsAsync(subDistricts);
-            _logger.LogInformation("Sincronização de subdistritos com o Elasticsearch: {Result}", subDistrictsResult ? "Sucesso" : "Falha");
-                
+            _logger.LogInformation("Sincronização de subdistritos com o Elasticsearch: {Result}",
+                subDistrictsResult ? "Sucesso" : "Falha");
+
             _logger.LogInformation("Sincronização com o Elasticsearch concluída");
         }
         catch (Exception ex)

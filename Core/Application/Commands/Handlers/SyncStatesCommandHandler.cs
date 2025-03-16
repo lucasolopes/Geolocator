@@ -1,5 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;

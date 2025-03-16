@@ -1,5 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;
@@ -10,10 +9,10 @@ namespace Application.Commands.Handlers;
 
 public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCommand>
 {
+    private readonly IDistrictsRepository _districtsRepository;
     private readonly IIbgeService _ibgeService;
     private readonly ILogger<SyncSubDistrictsCommandHandler> _logger;
     private readonly ISubDistrictsRepository _subDistrictsRepository;
-    private readonly IDistrictsRepository _districtsRepository;
 
     public SyncSubDistrictsCommandHandler(
         IIbgeService ibgeService,
@@ -47,7 +46,9 @@ public class SyncSubDistrictsCommandHandler : IRequestHandler<SyncSubDistrictsCo
 
             await _subDistrictsRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de subdistritos concluída com sucesso. Processados {Count} subdistritos", newSubDistricts.Count);
+            _logger.LogInformation(
+                "Sincronização de subdistritos concluída com sucesso. Processados {Count} subdistritos",
+                newSubDistricts.Count);
         }
         catch (Exception ex)
         {

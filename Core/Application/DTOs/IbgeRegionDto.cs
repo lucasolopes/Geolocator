@@ -11,12 +11,9 @@ public class IbgeRegionDto
         Sigla = sigla;
     }
 
-    [JsonPropertyName("id")]
-    public long Id { get; set; }
-    
-    [JsonPropertyName("nome")]
-    public string Nome { get; set; } = null!;
-    
-    [JsonPropertyName("sigla")]
-    public string Sigla { get; set; } = null!;
+    [JsonPropertyName("id")] public long Id { get; set; }
+
+    [JsonPropertyName("nome")] public string Nome { get; set; } = null!;
+
+    [JsonPropertyName("sigla")] public string Sigla { get; set; } = null!;
 }

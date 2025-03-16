@@ -10,29 +10,24 @@ namespace Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Primeiro crie uma coluna temporária
-            migrationBuilder.AddColumn<int>(
+                         migrationBuilder.AddColumn<int>(
                 name: "DistrictIdTemp",
                 table: "SubDistricts",
                 type: "integer",
                 nullable: true);
         
-            // Popule a coluna temporária com os valores convertidos
-            migrationBuilder.Sql("UPDATE \"SubDistricts\" SET \"DistrictIdTemp\" = \"DistrictId\"::integer WHERE \"DistrictId\" ~ '^\\d+$'");
+                         migrationBuilder.Sql("UPDATE \"SubDistricts\" SET \"DistrictIdTemp\" = \"DistrictId\"::integer WHERE \"DistrictId\" ~ '^\\d+$'");
     
-            // Remova a coluna antiga
-            migrationBuilder.DropColumn(
+                         migrationBuilder.DropColumn(
                 name: "DistrictId",
                 table: "SubDistricts");
         
-            // Renomeie a coluna temporária para DistrictId
-            migrationBuilder.RenameColumn(
+                         migrationBuilder.RenameColumn(
                 name: "DistrictIdTemp",
                 table: "SubDistricts",
                 newName: "DistrictId");
         
-            // Faça a coluna não ser nula
-            migrationBuilder.AlterColumn<int>(
+                         migrationBuilder.AlterColumn<int>(
                 name: "DistrictId",
                 table: "SubDistricts",
                 type: "integer",
@@ -43,29 +38,24 @@ namespace Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Adicione uma coluna temporária do tipo text
-            migrationBuilder.AddColumn<string>(
+                         migrationBuilder.AddColumn<string>(
                 name: "DistrictIdTemp",
                 table: "SubDistricts",
                 type: "text",
                 nullable: true);
         
-            // Converta os valores inteiros para string
-            migrationBuilder.Sql("UPDATE \"SubDistricts\" SET \"DistrictIdTemp\" = \"DistrictId\"::text");
+                         migrationBuilder.Sql("UPDATE \"SubDistricts\" SET \"DistrictIdTemp\" = \"DistrictId\"::text");
     
-            // Remova a coluna antiga
-            migrationBuilder.DropColumn(
+                         migrationBuilder.DropColumn(
                 name: "DistrictId",
                 table: "SubDistricts");
         
-            // Renomeie a coluna temporária para DistrictId
-            migrationBuilder.RenameColumn(
+                         migrationBuilder.RenameColumn(
                 name: "DistrictIdTemp",
                 table: "SubDistricts",
                 newName: "DistrictId");
         
-            // Configure a coluna DistrictId como não nula
-            migrationBuilder.AlterColumn<string>(
+                         migrationBuilder.AlterColumn<string>(
                 name: "DistrictId",
                 table: "SubDistricts",
                 type: "text",

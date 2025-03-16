@@ -2,4 +2,4 @@
 
 namespace Application.Commands.IbgeSync;
 
-public record SyncSubDistrictsCommand() : IRequest;
+public record SyncSubDistrictsCommand : IRequest;

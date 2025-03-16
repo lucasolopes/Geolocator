@@ -9,6 +9,7 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+
     public async Task<HashSet<long>> GetAllIdsAsync()
     {
         return new HashSet<long>(await _context.Set<SubDistricts>().Select(s => s.Id).ToListAsync());
@@ -52,7 +53,7 @@ public class SubDistrictsRepository(GeolocatorDbContext context) : ISubDistricts
     {
         return await _context.Set<SubDistricts>()
             .Where(subDistrict => ids.Contains(subDistrict.Id))
-            .Include(subDistrict => subDistrict.District) 
+            .Include(subDistrict => subDistrict.District)
             .ToListAsync();
     }
 

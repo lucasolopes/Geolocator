@@ -2,4 +2,4 @@
 
 namespace Application.Commands.IbgeSync;
 
-public record SyncStatesCommand() : IRequest;
+public record SyncStatesCommand : IRequest;

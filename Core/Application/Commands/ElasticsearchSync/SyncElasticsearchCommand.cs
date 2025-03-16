@@ -2,10 +2,10 @@
 
 namespace Application.Commands.ElasticsearchSync;
 
-public record SyncElasticsearchCommand() : IRequest<SyncElasticsearchResult>;
+public record SyncElasticsearchCommand : IRequest<SyncElasticsearchResult>;
 
 public record SyncElasticsearchResult(
-    bool Success, 
+    bool Success,
     bool RegionsIndexed,
     bool StatesIndexed,
     bool MesoregionsIndexed,

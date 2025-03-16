@@ -64,12 +64,10 @@ public class ElasticsearchService : IElasticsearchService
         _logger.LogInformation("Verificação e criação de índices concluída");
     }
 
-    // Implementação dos métodos de indexação
     public async Task<bool> IndexRegionsAsync(IEnumerable<Region> regions)
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<RegionDto> regionDtos = regions.Select(r => new RegionDto
             {
                 Id = r.Id,
@@ -101,7 +99,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<StateDto> stateDtos = states.Select(s => new StateDto
             {
                 Id = s.Id,
@@ -134,7 +131,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<MesoregionDto> mesoregionDtos = mesoregions.Select(m => new MesoregionDto
             {
                 Id = m.Id,
@@ -166,7 +162,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<MicroRegionDto> microRegionDtos = microRegions.Select(m => new MicroRegionDto
             {
                 Id = m.Id,
@@ -198,7 +193,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<MunicipalityDto> municipalityDtos = municipalities.Select(m => new MunicipalityDto
             {
                 Id = m.Id,
@@ -230,7 +224,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<DistrictsDto> districtDtos = districts.Select(d => new DistrictsDto
             {
                 Id = d.Id,
@@ -262,7 +255,6 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Convertendo para DTOs
             IEnumerable<SubDistrictsDto> subDistrictDtos = subDistricts.Select(s => new SubDistrictsDto
             {
                 Id = s.Id,
@@ -388,19 +380,17 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<Region>();
             }
 
-            // Obter IDs dos resultados
+
             var regionIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver regiões, retornar uma lista vazia
             if (!regionIds.Any())
             {
                 return Enumerable.Empty<Region>();
             }
 
-            // Buscar regiões completas com relacionamentos do banco de dados
             List<Region> regions = await _regionRepository.GetByIdsWithRelationshipsAsync(regionIds);
             return regions;
         }
@@ -427,19 +417,17 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<State>();
             }
 
-            // Obter IDs dos resultados
+
             var stateIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver estados, retornar uma lista vazia
             if (!stateIds.Any())
             {
                 return Enumerable.Empty<State>();
             }
 
-            // Buscar estados completos com relacionamentos do banco de dados
             List<State> states = await _stateRepository.GetByIdsWithRelationshipsAsync(stateIds);
             return states;
         }
@@ -467,19 +455,16 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<Mesoregion>();
             }
 
-            // Obter IDs dos resultados
             var mesoregionIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver mesorregiões, retornar uma lista vazia
             if (!mesoregionIds.Any())
             {
                 return Enumerable.Empty<Mesoregion>();
             }
 
-            // Buscar mesorregiões completas com relacionamentos do banco de dados
             List<Mesoregion> mesoregions = await _mesoregionRepository.GetByIdsWithRelationshipsAsync(mesoregionIds);
             return mesoregions;
         }
@@ -507,19 +492,16 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<MicroRegion>();
             }
 
-            // Obter IDs dos resultados
             var microRegionIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver microrregiões, retornar uma lista vazia
             if (!microRegionIds.Any())
             {
                 return Enumerable.Empty<MicroRegion>();
             }
 
-            // Buscar microrregiões completas com relacionamentos do banco de dados
             List<MicroRegion> microRegions =
                 await _microRegionRepository.GetByIdsWithRelationshipsAsync(microRegionIds);
             return microRegions;
@@ -548,19 +530,16 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<Municipality>();
             }
 
-            // Obter IDs dos resultados
             var municipalityIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver municípios, retornar uma lista vazia
             if (!municipalityIds.Any())
             {
                 return Enumerable.Empty<Municipality>();
             }
 
-            // Buscar municípios completos com relacionamentos do banco de dados
             List<Municipality> municipalities =
                 await _municipalityRepository.GetByIdsWithRelationshipsAsync(municipalityIds);
             return municipalities;
@@ -589,19 +568,16 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<Districts>();
             }
 
-            // Obter IDs dos resultados
             var districtIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver distritos, retornar uma lista vazia
             if (!districtIds.Any())
             {
                 return Enumerable.Empty<Districts>();
             }
 
-            // Buscar distritos completos com relacionamentos do banco de dados
             List<Districts> districts = await _districtsRepository.GetByIdsWithRelationshipsAsync(districtIds);
             return districts;
         }
@@ -629,19 +605,16 @@ public class ElasticsearchService : IElasticsearchService
                 return Enumerable.Empty<SubDistricts>();
             }
 
-            // Obter IDs dos resultados
             var subdistrictIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
 
-            // Se não houver subdistritos, retornar uma lista vazia
             if (!subdistrictIds.Any())
             {
                 return Enumerable.Empty<SubDistricts>();
             }
 
-            // Buscar subdistritos completos com relacionamentos do banco de dados
             List<SubDistricts> subdistricts =
                 await _subDistrictsRepository.GetByIdsWithRelationshipsAsync(subdistrictIds);
             return subdistricts;
@@ -660,7 +633,6 @@ public class ElasticsearchService : IElasticsearchService
     private async Task<ISearchResponse<T>> PerformAdvancedSearch<T>(string indexName, string searchTerm, int page = 1,
         int pageSize = 10) where T : class
     {
-        // Preparação do termo de busca
         searchTerm = NormalizeSearchTerm(searchTerm);
         IEnumerable<string> tokens = TokenizeSearchTerm(searchTerm);
 
@@ -672,7 +644,6 @@ public class ElasticsearchService : IElasticsearchService
             .Sort(ss => ss.Descending(SortSpecialField.Score))
         );
 
-        // Log para debug
         _logger.LogDebug("Elasticsearch query: {Query}", searchResponse.DebugInformation);
 
         return searchResponse;
@@ -680,15 +651,12 @@ public class ElasticsearchService : IElasticsearchService
 
     private QueryContainer BuildAdvancedQuery<T>(string searchTerm, IEnumerable<string> tokens) where T : class
     {
-        // A string "name" refere-se ao nome do campo no índice do Elasticsearch
-        // Todos os nossos DTOs têm uma propriedade Name que é mapeada para o campo "name" no Elasticsearch
         const string fieldName = "name";
 
         return new BoolQuery
         {
             Should = new List<QueryContainer>
             {
-                // 1. Correspondência exata com maior pontuação
                 new MatchQuery
                 {
                     Field = fieldName,
@@ -696,7 +664,6 @@ public class ElasticsearchService : IElasticsearchService
                     Boost = 10
                 },
 
-                // 2. Correspondência fuzzy para lidar com erros ortográficos
                 new MatchQuery
                 {
                     Field = fieldName,
@@ -705,7 +672,6 @@ public class ElasticsearchService : IElasticsearchService
                     Boost = 5
                 },
 
-                // 3. Busca por prefixo para encontrar termos que começam com o padrão
                 new PrefixQuery
                 {
                     Field = fieldName,
@@ -713,7 +679,6 @@ public class ElasticsearchService : IElasticsearchService
                     Boost = 3
                 },
 
-                // 4. Busca por cada token individual
                 new BoolQuery
                 {
                     Should = tokens.Select(token =>
@@ -727,7 +692,6 @@ public class ElasticsearchService : IElasticsearchService
                     Boost = 2
                 },
 
-                // 5. Busca por fragmentos do termo (usando wildcard)
                 new WildcardQuery
                 {
                     Field = fieldName,
@@ -746,7 +710,6 @@ public class ElasticsearchService : IElasticsearchService
             return searchTerm;
         }
 
-        // Normalização básica de acentos
         string normalized = searchTerm.Normalize(NormalizationForm.FormD);
         StringBuilder sb = new();
 
@@ -768,7 +731,6 @@ public class ElasticsearchService : IElasticsearchService
             return Enumerable.Empty<string>();
         }
 
-        // Tokenização por espaços e caracteres especiais
         return Regex.Split(searchTerm, @"[\s\-_.,;:!?]+")
             .Where(token => !string.IsNullOrWhiteSpace(token))
             .Select(token => token.Trim().ToLowerInvariant());

@@ -16,7 +16,7 @@ public class SubDistrictMap : IEntityTypeConfiguration<SubDistricts>
         builder.Property(p => p.Name)
             .HasMaxLength(150)
             .IsRequired();
-            
+
         builder.Property(p => p.DistrictId)
             .HasColumnType("integer")
             .IsRequired();

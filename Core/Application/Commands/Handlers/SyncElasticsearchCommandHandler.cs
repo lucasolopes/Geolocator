@@ -19,15 +19,15 @@ public class SyncElasticsearchCommandHandler(
     ILogger<SyncElasticsearchCommandHandler> logger)
     : IRequestHandler<SyncElasticsearchCommand, SyncElasticsearchResult>
 {
+    private readonly IDistrictsRepository _districtsRepository = districtsRepository;
     private readonly IElasticsearchService _elasticsearchService = elasticsearchService;
-    private readonly IRegionRepository _regionRepository = regionRepository;
-    private readonly IStateRepository _stateRepository = stateRepository;
+    private readonly ILogger<SyncElasticsearchCommandHandler> _logger = logger;
     private readonly IMesoregionRepository _mesoregionRepository = mesoregionRepository;
     private readonly IMicroRegionRepository _microRegionRepository = microRegionRepository;
     private readonly IMunicipalityRepository _municipalityRepository = municipalityRepository;
-    private readonly IDistrictsRepository _districtsRepository = districtsRepository;
+    private readonly IRegionRepository _regionRepository = regionRepository;
+    private readonly IStateRepository _stateRepository = stateRepository;
     private readonly ISubDistrictsRepository _subDistrictsRepository = subDistrictsRepository;
-    private readonly ILogger<SyncElasticsearchCommandHandler> _logger = logger;
 
     public async Task<SyncElasticsearchResult> Handle(SyncElasticsearchCommand request,
         CancellationToken cancellationToken)
@@ -36,40 +36,32 @@ public class SyncElasticsearchCommandHandler(
 
         try
         {
-            // Verificar e criar índices se necessário
             await _elasticsearchService.CreateIndicesIfNotExistAsync();
 
-            // Sincronizar regiões
             _logger.LogInformation("Sincronizando regiões com o Elasticsearch");
             List<Region> regions = await _regionRepository.GetAllAsync();
             bool regionsResult = await _elasticsearchService.IndexRegionsAsync(regions);
 
-            // Sincronizar estados
             _logger.LogInformation("Sincronizando estados com o Elasticsearch");
             List<State> states = await _stateRepository.GetAllAsync();
             bool statesResult = await _elasticsearchService.IndexStatesAsync(states);
 
-            // Sincronizar mesorregiões
             _logger.LogInformation("Sincronizando mesorregiões com o Elasticsearch");
             List<Mesoregion> mesoregions = await _mesoregionRepository.GetAllAsync();
             bool mesoregionsResult = await _elasticsearchService.IndexMesoregionsAsync(mesoregions);
 
-            // Sincronizar microrregiões
             _logger.LogInformation("Sincronizando microrregiões com o Elasticsearch");
             List<MicroRegion> microRegions = await _microRegionRepository.GetAllAsync();
             bool microRegionsResult = await _elasticsearchService.IndexMicroRegionsAsync(microRegions);
 
-            // Sincronizar municípios
             _logger.LogInformation("Sincronizando municípios com o Elasticsearch");
             List<Municipality> municipalities = await _municipalityRepository.GetAllAsync();
             bool municipalitiesResult = await _elasticsearchService.IndexMunicipalitiesAsync(municipalities);
 
-            // Sincronizar distritos
             _logger.LogInformation("Sincronizando distritos com o Elasticsearch");
             List<Districts> districts = await _districtsRepository.GetAllAsync();
             bool districtsResult = await _elasticsearchService.IndexDistrictsAsync(districts);
 
-            // Sincronizar subdistritos
             _logger.LogInformation("Sincronizando subdistritos com o Elasticsearch");
             List<SubDistricts> subDistricts = await _subDistrictsRepository.GetAllAsync();
             bool subDistrictsResult = await _elasticsearchService.IndexSubDistrictsAsync(subDistricts);

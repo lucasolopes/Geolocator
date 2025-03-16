@@ -1,6 +1,4 @@
-﻿using Nest;
-
-namespace Elasticsearch.DTOs;
+﻿namespace Elasticsearch.DTOs;
 
 public class MesoregionDto
 {

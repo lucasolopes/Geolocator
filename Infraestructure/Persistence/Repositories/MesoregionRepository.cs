@@ -9,6 +9,7 @@ public class MesoregionRepository(GeolocatorDbContext context) : IMesoregionRepo
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+
     public async Task<HashSet<long>> GetAllIdsAsync()
     {
         return new HashSet<long>(await _context.Mesoregions.Select(m => m.Id).ToListAsync());

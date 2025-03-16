@@ -9,6 +9,7 @@ public class StateRepository(GeolocatorDbContext context) : IStateRepository
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+
     public async Task<HashSet<long>> GetAllIdsAsync()
     {
         return new HashSet<long>(await _context.States.Select(s => s.Id).ToListAsync());

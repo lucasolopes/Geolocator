@@ -1,9 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
 using Persistence;
-using System;
 
 namespace Geolocator.Configurations;
 
@@ -15,7 +14,6 @@ public static class DbContextConfiguration
         {
             string? connectionString = Environment.GetEnvironmentVariable("ConnectionString");
 
-            // Adicionando parâmetros de pooling diretamente na string de conexão
             var builder = new NpgsqlConnectionStringBuilder(connectionString)
             {
                 MaxPoolSize = 100,
@@ -26,11 +24,11 @@ public static class DbContextConfiguration
                 CommandTimeout = 60,
                 KeepAlive = 60,
                 Pooling = true,
-                Enlist = true,                    // Participação em transações distribuídas
-                SslMode = SslMode.Prefer,         // Preferência por SSL, se disponível
-                AutoPrepareMinUsages = 5,         // Prepara automaticamente statements usados mais de 5 vezes
-                MaxAutoPrepare = 20,              // Máximo de statements preparados automaticamente
-                ApplicationName = "Geolocator"    // Nome da aplicação para identificação no servidor
+                Enlist = true,
+                SslMode = SslMode.Prefer,
+                AutoPrepareMinUsages = 5,
+                MaxAutoPrepare = 20,
+                ApplicationName = "Geolocator"
             };
 
             ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -38,29 +36,27 @@ public static class DbContextConfiguration
 
             options.UseNpgsql(builder.ConnectionString, npgsqlOptions =>
                 {
-                    // Configurações de Resiliência
                     npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorCodesToAdd: null
+                        5,
+                        TimeSpan.FromSeconds(10),
+                        null
                     );
 
-                    // Configurações de Desempenho
                     npgsqlOptions.SetPostgresVersion(15, 0);
                     npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 })
                 .LogTo(
                     log => logger.LogInformation(log.ToString()),
                     (eventId, logLevel) => logLevel >= LogLevel.Warning ||
-                                          eventId.Id == Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandExecuted.Id &&
-                                          logLevel >= LogLevel.Information
+                                           eventId.Id == RelationalEventId.CommandExecuted.Id &&
+                                           logLevel >= LogLevel.Information
                 )
-                .EnableSensitiveDataLogging(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+                .EnableSensitiveDataLogging(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ==
+                                            "Development")
                 .EnableDetailedErrors(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
                 .UseLoggerFactory(loggerFactory);
-        }, ServiceLifetime.Scoped);
+        });
 
-        // Adiciona uma verificação básica de saúde para o banco
         services.AddHealthChecks()
             .AddCheck("Postgres Database", () =>
             {
@@ -71,12 +67,12 @@ public static class DbContextConfiguration
                     using NpgsqlCommand cmd = conn.CreateCommand();
                     cmd.CommandText = "SELECT 1";
                     cmd.ExecuteScalar();
-                    return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy();
+                    return HealthCheckResult.Healthy();
                 }
                 catch (Exception ex)
                 {
-                    return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(ex.Message);
+                    return HealthCheckResult.Unhealthy(ex.Message);
                 }
-            }, tags: new[] { "db", "postgres", "data" });
+            }, new[] { "db", "postgres", "data" });
     }
 }

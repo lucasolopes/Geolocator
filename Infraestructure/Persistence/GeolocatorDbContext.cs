@@ -1,8 +1,8 @@
 ﻿using Application.Interfaces.Repositories;
 using Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Persistence;
-using Microsoft.EntityFrameworkCore;
 
 public class GeolocatorDbContext(DbContextOptions<GeolocatorDbContext> options) : DbContext(options), IUnitOfWork
 {

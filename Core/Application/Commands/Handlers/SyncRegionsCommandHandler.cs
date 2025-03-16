@@ -1,6 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.DTOs;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;
@@ -38,12 +36,13 @@ public class SyncRegionsCommandHandler(
 
             await _regionRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de regiões concluída com sucesso. Processadas {Count} regiões", newRegions.Count);
+            _logger.LogInformation("Sincronização de regiões concluída com sucesso. Processadas {Count} regiões",
+                newRegions.Count);
         }
         catch (Exception ex)
         {
             _logger.LogInformation("Erro durante a sincronização de regiões. Processadas 0 regiões");
-           throw;
+            throw;
         }
     }
 }

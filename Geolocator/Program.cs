@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Application.Interfaces.Search;
 using Elasticsearch.Extensions;
 using Geolocator.Configurations;
@@ -8,7 +8,6 @@ using Persistence;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.ConfigureDbContext();
 
 builder.Services.ConfigureCors();
@@ -23,15 +22,14 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
-        
+
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-        
+
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -39,7 +37,6 @@ WebApplication app = builder.Build();
 
 app.UseCors("AllowLocalhostAndZero");
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -56,12 +53,10 @@ using (IServiceScope scope = app.Services.CreateScope())
 {
     try
     {
-        // Migra o banco de dados PostgreSQL
         GeolocatorDbContext db = scope.ServiceProvider.GetRequiredService<GeolocatorDbContext>();
         await db.Database.MigrateAsync();
 
-        // Inicializa os índices do Elasticsearch
-        IElasticsearchService elasticService = scope.ServiceProvider.GetRequiredService<Application.Interfaces.Search.IElasticsearchService>();
+        IElasticsearchService elasticService = scope.ServiceProvider.GetRequiredService<IElasticsearchService>();
         await elasticService.CreateIndicesIfNotExistAsync();
     }
     catch (Exception ex)

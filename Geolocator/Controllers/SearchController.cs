@@ -1,9 +1,6 @@
 ﻿using Application.Queries.Search;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
 
 namespace Geolocator.Controllers;
 
@@ -98,13 +95,13 @@ public class SearchController : ControllerBase
         {
             var query = new SearchLocationsQuery(
                 q, page, pageSize,
-                includeRegions: true,
-                includeStates: false,
-                includeMesoregions: false,
-                includeMicroRegions: false,
-                includeMunicipalities: false,
-                includeDistricts: false,
-                includeSubDistricts: false);
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false);
 
             SearchLocationsResult result = await _mediator.Send(query);
 
@@ -136,13 +133,13 @@ public class SearchController : ControllerBase
         {
             var query = new SearchLocationsQuery(
                 q, page, pageSize,
-                includeRegions: false,
-                includeStates: true,
-                includeMesoregions: false,
-                includeMicroRegions: false,
-                includeMunicipalities: false,
-                includeDistricts: false,
-                includeSubDistricts: false);
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
 
             SearchLocationsResult result = await _mediator.Send(query);
 
@@ -174,13 +171,13 @@ public class SearchController : ControllerBase
         {
             var query = new SearchLocationsQuery(
                 q, page, pageSize,
-                includeRegions: false,
-                includeStates: false,
-                includeMesoregions: false,
-                includeMicroRegions: false,
-                includeMunicipalities: true,
-                includeDistricts: false,
-                includeSubDistricts: false);
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false);
 
             SearchLocationsResult result = await _mediator.Send(query);
 

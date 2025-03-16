@@ -2,14 +2,6 @@
 
 public class Districts
 {
-    public long Id { get; set; }
-    public string Name { get; set; } = null!;
-    public long MunicipalityId { get; set; }
-
-    //Relationships
-    public List<SubDistricts> SubDistricts { get; set; } = new List<SubDistricts>();
-    public Municipality Municipality { get; set; } = null!;
-
     public Districts() { }
 
     public Districts(long itemId, string itemNome, long municipalityId)
@@ -18,4 +10,11 @@ public class Districts
         Name = itemNome;
         MunicipalityId = municipalityId;
     }
+
+    public long Id { get; set; }
+    public string Name { get; set; } = null!;
+    public long MunicipalityId { get; set; }
+
+    public List<SubDistricts> SubDistricts { get; set; } = new();
+    public Municipality Municipality { get; set; } = null!;
 }

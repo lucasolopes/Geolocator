@@ -1,8 +1,8 @@
 ﻿using Application.Interfaces.Search;
-using Domain.Entities;
 using Elasticsearch.DTOs;
 using Elasticsearch.Options;
 using Elasticsearch.Services;
+using ExternalServices;
 using Microsoft.Extensions.Options;
 using Nest;
 using Scrutor;
@@ -15,7 +15,7 @@ public static class ServiceConfiguration
     {
         services.Scan(scan => scan
             .FromAssemblies(
-                ExternalServices.AssemblyReference.Assembly,
+                AssemblyReference.Assembly,
                 Persistence.AssemblyReference.Assembly)
             .AddClasses()
             .UsingRegistrationStrategy(RegistrationStrategy.Skip)
@@ -40,7 +40,7 @@ public static class ServiceConfiguration
 
         services.AddSingleton<IElasticClient>(sp =>
         {
-            ElasticsearchOptions options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ElasticsearchOptions>>().Value;
+            ElasticsearchOptions options = sp.GetRequiredService<IOptions<ElasticsearchOptions>>().Value;
             ConnectionSettings? connectionSettings = new ConnectionSettings(new Uri(options.Uri))
                 .DefaultMappingFor<RegionDto>(m => m.IndexName(options.RegionIndexName))
                 .DefaultMappingFor<StateDto>(m => m.IndexName(options.StateIndexName))

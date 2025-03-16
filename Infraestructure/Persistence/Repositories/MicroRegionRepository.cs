@@ -9,6 +9,7 @@ public class MicroRegionRepository(GeolocatorDbContext context) : IMicroRegionRe
     private readonly GeolocatorDbContext _context = context;
 
     public IUnitOfWork UnitOfWork => _context;
+
     public async Task<HashSet<long>> GetAllIdsAsync()
     {
         return new HashSet<long>(await _context.MicroRegions.Select(m => m.Id).ToListAsync());
@@ -52,8 +53,8 @@ public class MicroRegionRepository(GeolocatorDbContext context) : IMicroRegionRe
     {
         return await _context.MicroRegions
             .Where(microRegion => ids.Contains(microRegion.Id))
-            .Include(microRegion => microRegion.Mesoregion)  
-            .Include(microRegion => microRegion.Municipalities)  
+            .Include(microRegion => microRegion.Mesoregion)
+            .Include(microRegion => microRegion.Municipalities)
             .ToListAsync();
     }
 

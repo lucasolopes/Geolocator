@@ -1,5 +1,4 @@
 ﻿using Application.Commands.IbgeSync;
-using Application.Factories;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entities;
@@ -12,8 +11,8 @@ public class SyncMunicipalitiesCommandHandler : IRequestHandler<SyncMunicipaliti
 {
     private readonly IIbgeService _ibgeService;
     private readonly ILogger<SyncMunicipalitiesCommandHandler> _logger;
-    private readonly IMunicipalityRepository _municipalityRepository;
     private readonly IMicroRegionRepository _microRegionRepository;
+    private readonly IMunicipalityRepository _municipalityRepository;
 
     public SyncMunicipalitiesCommandHandler(
         IIbgeService ibgeService,
@@ -47,7 +46,8 @@ public class SyncMunicipalitiesCommandHandler : IRequestHandler<SyncMunicipaliti
 
             await _municipalityRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Sincronização de municípios concluída com sucesso. Processados {Count} municípios", newMunicipalities.Count);
+            _logger.LogInformation("Sincronização de municípios concluída com sucesso. Processados {Count} municípios",
+                newMunicipalities.Count);
         }
         catch (Exception ex)
         {
