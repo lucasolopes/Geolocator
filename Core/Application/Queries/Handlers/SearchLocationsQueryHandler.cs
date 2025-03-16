@@ -34,81 +34,50 @@ public class SearchLocationsQueryHandler : IRequestHandler<SearchLocationsQuery,
             IEnumerable<Districts> districts = Enumerable.Empty<Districts>();
             IEnumerable<SubDistricts> subDistricts = Enumerable.Empty<SubDistricts>();
 
-            // Executa as buscas selecionadas em paralelo
-            var tasks = new List<Task>();
-
+            // Executa as buscas SEQUENCIALMENTE para evitar problemas de concorrência
             if (request.IncludeRegions)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    regions = await _elasticsearchService.SearchRegionsByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                regions = await _elasticsearchService.SearchRegionsByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeStates)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    states = await _elasticsearchService.SearchStatesByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                states = await _elasticsearchService.SearchStatesByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeMesoregions)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    mesoregions = await _elasticsearchService.SearchMesoregionsByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                mesoregions = await _elasticsearchService.SearchMesoregionsByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeMicroRegions)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    microRegions = await _elasticsearchService.SearchMicroRegionsByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                microRegions = await _elasticsearchService.SearchMicroRegionsByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeMunicipalities)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    municipalities = await _elasticsearchService.SearchMunicipalitiesByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                municipalities = await _elasticsearchService.SearchMunicipalitiesByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeDistricts)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    districts = await _elasticsearchService.SearchDistrictsByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                districts = await _elasticsearchService.SearchDistrictsByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
             if (request.IncludeSubDistricts)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    subDistricts = await _elasticsearchService.SearchSubDistrictsByNameAsync(
-                        request.SearchTerm, request.Page, request.PageSize);
-                }, cancellationToken));
+                subDistricts = await _elasticsearchService.SearchSubDistrictsByNameAsync(
+                    request.SearchTerm, request.Page, request.PageSize);
             }
 
-            await Task.WhenAll(tasks);
-
-            _logger.LogInformation("Busca concluída para o termo '{SearchTerm}'. " +
-                                   "Regiões: {RegionsCount}, Estados: {StatesCount}, " +
-                                   "Mesorregiões: {MesoregionsCount}, Microrregiões: {MicroRegionsCount}, " +
-                                   "Municípios: {MunicipalitiesCount}, Distritos: {DistrictsCount}, " +
-                                   "Subdistritos: {SubDistrictsCount}",
-                request.SearchTerm, regions.Count(), states.Count(), mesoregions.Count(),
-                microRegions.Count(), municipalities.Count(), districts.Count(), subDistricts.Count());
+            _logger.LogInformation("Busca concluída para o termo '{SearchTerm}'...", request.SearchTerm);
 
             return new SearchLocationsResult(
                 regions,

@@ -15,11 +15,6 @@ public static class DbContextConfiguration
         {
             string? connectionString = Environment.GetEnvironmentVariable("ConnectionString");
 
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException("ConnectionString não configurada no ambiente.");
-            }
-
             // Adicionando parâmetros de pooling diretamente na string de conexão
             var builder = new NpgsqlConnectionStringBuilder(connectionString)
             {

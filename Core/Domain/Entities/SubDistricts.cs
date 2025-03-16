@@ -18,5 +18,5 @@ public class SubDistricts
     public long DistrictId { get; set; }
 
     //Relationships
-    public Districts District = null!;
+    public Districts District { get; set; } = null!;
 }

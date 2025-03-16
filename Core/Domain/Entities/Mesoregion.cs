@@ -7,8 +7,8 @@ public class Mesoregion
     public long StateId { get; set; }
 
     //Relationships
-    public List<MicroRegion> MicroRegions = new List<MicroRegion>();
-    public State State = null!;
+    public List<MicroRegion> MicroRegions { get; set; } = new List<MicroRegion>();
+    public State State { get; set; } = null!;
 
     public Mesoregion() { }
 

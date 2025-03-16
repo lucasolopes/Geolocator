@@ -1,4 +1,7 @@
-﻿using Application.Interfaces.Repositories;
+﻿using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Search;
 using Domain.Entities;
 using Elasticsearch.DTOs;
@@ -50,48 +53,13 @@ public class ElasticsearchService : IElasticsearchService
     {
         _logger.LogInformation("Verificando se os índices do Elasticsearch existem");
 
-        await CreateIndexIfNotExists<RegionDto>(_options.RegionIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Keyword(k => k.Name(n => n.Initials))
-            ));
-
-        await CreateIndexIfNotExists<StateDto>(_options.StateIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Keyword(k => k.Name(n => n.Initials))
-                .Number(n => n.Name(n => n.RegionId).Type(NumberType.Integer))
-            ));
-
-        await CreateIndexIfNotExists<MesoregionDto>(_options.MesoregionIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Number(n => n.Name(n => n.StateId).Type(NumberType.Integer))
-            ));
-
-        await CreateIndexIfNotExists<MicroRegionDto>(_options.MicroRegionIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Number(n => n.Name(n => n.MesoregionId).Type(NumberType.Integer))
-            ));
-
-        await CreateIndexIfNotExists<MunicipalityDto>(_options.MunicipalityIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Number(n => n.Name(n => n.MicroRegionId).Type(NumberType.Integer))
-            ));
-
-        await CreateIndexIfNotExists<DistrictsDto>(_options.DistrictIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Number(n => n.Name(n => n.MunicipalityId).Type(NumberType.Integer))
-            ));
-
-        await CreateIndexIfNotExists<SubDistrictsDto>(_options.SubDistrictIndexName, r => r
-            .Properties(p => p
-                .Text(t => t.Name(n => n.Name).Analyzer("brazilian"))
-                .Number(n => n.Name(n => n.DistrictId).Type(NumberType.Integer))
-            ));
+        await CreateIndexIfNotExists<RegionDto>(_options.RegionIndexName);
+        await CreateIndexIfNotExists<StateDto>(_options.StateIndexName);
+        await CreateIndexIfNotExists<MesoregionDto>(_options.MesoregionIndexName);
+        await CreateIndexIfNotExists<MicroRegionDto>(_options.MicroRegionIndexName);
+        await CreateIndexIfNotExists<MunicipalityDto>(_options.MunicipalityIndexName);
+        await CreateIndexIfNotExists<DistrictsDto>(_options.DistrictIndexName);
+        await CreateIndexIfNotExists<SubDistrictsDto>(_options.SubDistrictIndexName);
 
         _logger.LogInformation("Verificação e criação de índices concluída");
     }
@@ -322,22 +290,97 @@ public class ElasticsearchService : IElasticsearchService
         }
     }
 
+    #region Index Creation Utilities
+
+    private async Task CreateIndexIfNotExists<T>(string indexName) where T : class
+    {
+        ExistsResponse indexExists = await _elasticClient.Indices.ExistsAsync(indexName);
+        if (!indexExists.Exists)
+        {
+            _logger.LogInformation("Criando índice {IndexName}", indexName);
+
+            CreateIndexResponse? createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+                .Settings(s => s
+                    .NumberOfShards(1)
+                    .NumberOfReplicas(0)
+                    .RefreshInterval("30s")
+                    .Setting("index.max_ngram_diff", 13)
+                    .Analysis(a => a
+                        .Analyzers(aa => aa
+                            .Custom("brazilian", ca => ca
+                                .Tokenizer("standard")
+                                .Filters("lowercase", "brazilian_stemmer", "asciifolding", "ngram_filter")
+                            )
+                            .Custom("edge_ngram_analyzer", ca => ca
+                                .Tokenizer("edge_ngram_tokenizer")
+                                .Filters("lowercase", "asciifolding")
+                            )
+                        )
+                        .Tokenizers(t => t
+                            .EdgeNGram("edge_ngram_tokenizer", e => e
+                                .MinGram(2)
+                                .MaxGram(15)
+                                .TokenChars(TokenChar.Letter, TokenChar.Digit)
+                            )
+                        )
+                        .TokenFilters(tf => tf
+                            .Stemmer("brazilian_stemmer", st => st
+                                .Language("brazilian")
+                            )
+                            .NGram("ngram_filter", ng => ng
+                                .MinGram(2)
+                                .MaxGram(10)
+                            )
+                            .Synonym("synonym_filter", sf => sf
+                                .Synonyms(
+                                    "sp, são paulo",
+                                    "rj, rio de janeiro",
+                                    "df, brasília, distrito federal",
+                                    "ba, bahia",
+                                    "rs, rio grande do sul",
+                                    "mg, minas gerais"
+                                )
+                            )
+                        )
+                    )
+                )
+                .Map<T>(m => m
+                    .Properties(p => p
+                        .Text(t => t
+                            .Name("name")
+                            .Analyzer("brazilian")
+                            .Fields(f => f
+                                .Text(ft => ft.Name("edge").Analyzer("edge_ngram_analyzer"))
+                                .Keyword(k => k.Name("keyword").IgnoreAbove(256))
+                                .Completion(c => c.Name("suggest"))
+                            )
+                        )
+                    )
+                )
+            );
+
+            if (!createIndexResponse.IsValid)
+            {
+                _logger.LogError("Erro ao criar índice {IndexName}: {Error}",
+                    indexName, createIndexResponse.DebugInformation);
+                throw new Exception($"Falha ao criar índice {indexName}: {createIndexResponse.DebugInformation}");
+            }
+        }
+    }
+
+    #endregion
+
+    #region Search Methods with Advanced Query
+
     public async Task<IEnumerable<Region>> SearchRegionsByNameAsync(string searchTerm, int page = 1, int pageSize = 10)
     {
         try
         {
-            ISearchResponse<RegionDto>? searchResponse = await _elasticClient.SearchAsync<RegionDto>(s => s
-                .Index(_options.RegionIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<RegionDto> searchResponse = await PerformAdvancedSearch<RegionDto>(
+                _options.RegionIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
             if (!searchResponse.IsValid)
             {
@@ -350,40 +393,6 @@ public class ElasticsearchService : IElasticsearchService
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
-
-            // Se não houver regiões, retornar uma lista vazia
-            if (!regionIds.Any())
-            {
-                // Buscar "São" e "Paulo" como termos separados com operador OR
-                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                ISearchResponse<RegionDto>? wildCardQuery = await _elasticClient.SearchAsync<RegionDto>(s => s
-                    .Index(_options.RegionIndexName)
-                    .From((page - 1) * pageSize)
-                    .Size(pageSize)
-                    .Query(q => q
-                        .Match(m => m
-                            .Field(f => f.Name)
-                            .Query(searchTerm)
-                            .Fuzziness(Fuzziness.Auto)
-                        )
-                    )
-                );
-
-                if (wildCardQuery.IsValid)
-                {
-                    regionIds.AddRange(wildCardQuery.Documents
-                        .Where(dto => dto != null)
-                        .Select(dto => dto.Id)
-                        .ToList());
-                }
-
-                // Se ainda não houver regiões, verificar se estamos buscando pela região relacionada ao estado
-                if (!regionIds.Any() && searchTerm.Contains("Paulo"))
-                {
-                    // Buscar região Sudeste onde está São Paulo
-                    regionIds.Add(3); // Assumindo que 3 é o ID da região Sudeste
-                }
-            }
 
             // Se não houver regiões, retornar uma lista vazia
             if (!regionIds.Any())
@@ -406,18 +415,11 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<StateDto>? searchResponse = await _elasticClient.SearchAsync<StateDto>(s => s
-                .Index(_options.StateIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<StateDto> searchResponse = await PerformAdvancedSearch<StateDto>(
+                _options.StateIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
             if (!searchResponse.IsValid)
             {
@@ -453,58 +455,23 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Primeiro, buscar pelo nome exato
-            ISearchResponse<MesoregionDto>? exactMatchQuery = await _elasticClient.SearchAsync<MesoregionDto>(s => s
-                .Index(_options.MesoregionIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<MesoregionDto> searchResponse = await PerformAdvancedSearch<MesoregionDto>(
+                _options.MesoregionIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
-            if (!exactMatchQuery.IsValid)
+            if (!searchResponse.IsValid)
             {
-                _logger.LogError("Erro na busca de mesorregiões: {Error}", exactMatchQuery.DebugInformation);
+                _logger.LogError("Erro na busca de mesorregiões: {Error}", searchResponse.DebugInformation);
                 return Enumerable.Empty<Mesoregion>();
             }
 
             // Obter IDs dos resultados
-            var mesoregionIds = exactMatchQuery.Documents
+            var mesoregionIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
-
-            // Se não encontrou nada, tente um método de busca mais abrangente
-            if (!mesoregionIds.Any())
-            {
-                // Buscar "São" e "Paulo" como termos separados com operador OR
-                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                ISearchResponse<MesoregionDto>? wildCardQuery = await _elasticClient.SearchAsync<MesoregionDto>(s => s
-                    .Index(_options.MesoregionIndexName)
-                    .From((page - 1) * pageSize)
-                    .Size(pageSize)
-                    .Query(q => q
-                        .Match(m => m
-                            .Field(f => f.Name)
-                            .Query(searchTerm)
-                            .Fuzziness(Fuzziness.Auto)
-                        )
-                    )
-                );
-
-                if (wildCardQuery.IsValid)
-                {
-                    mesoregionIds.AddRange(wildCardQuery.Documents
-                        .Where(dto => dto != null)
-                        .Select(dto => dto.Id)
-                        .ToList());
-                }
-            }
 
             // Se não houver mesorregiões, retornar uma lista vazia
             if (!mesoregionIds.Any())
@@ -528,58 +495,23 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            // Primeiro, buscar pelo nome exato
-            ISearchResponse<MicroRegionDto>? exactMatchQuery = await _elasticClient.SearchAsync<MicroRegionDto>(s => s
-                .Index(_options.MicroRegionIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<MicroRegionDto> searchResponse = await PerformAdvancedSearch<MicroRegionDto>(
+                _options.MicroRegionIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
-            if (!exactMatchQuery.IsValid)
+            if (!searchResponse.IsValid)
             {
-                _logger.LogError("Erro na busca de microrregiões: {Error}", exactMatchQuery.DebugInformation);
+                _logger.LogError("Erro na busca de microrregiões: {Error}", searchResponse.DebugInformation);
                 return Enumerable.Empty<MicroRegion>();
             }
 
             // Obter IDs dos resultados
-            var microRegionIds = exactMatchQuery.Documents
+            var microRegionIds = searchResponse.Documents
                 .Where(dto => dto != null)
                 .Select(dto => dto.Id)
                 .ToList();
-
-            // Se não encontrou nada, tente um método de busca mais abrangente
-            if (!microRegionIds.Any())
-            {
-                // Buscar "São" e "Paulo" como termos separados com operador OR
-                string[] words = searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                ISearchResponse<MicroRegionDto>? wildCardQuery = await _elasticClient.SearchAsync<MicroRegionDto>(s => s
-                    .Index(_options.MicroRegionIndexName)
-                    .From((page - 1) * pageSize)
-                    .Size(pageSize)
-                    .Query(q => q
-                        .Match(m => m
-                            .Field(f => f.Name)
-                            .Query(searchTerm)
-                            .Fuzziness(Fuzziness.Auto)
-                        )
-                    )
-                );
-
-                if (wildCardQuery.IsValid)
-                {
-                    microRegionIds.AddRange(wildCardQuery.Documents
-                        .Where(dto => dto != null)
-                        .Select(dto => dto.Id)
-                        .ToList());
-                }
-            }
 
             // Se não houver microrregiões, retornar uma lista vazia
             if (!microRegionIds.Any())
@@ -604,18 +536,11 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<MunicipalityDto>? searchResponse = await _elasticClient.SearchAsync<MunicipalityDto>(s => s
-                .Index(_options.MunicipalityIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<MunicipalityDto> searchResponse = await PerformAdvancedSearch<MunicipalityDto>(
+                _options.MunicipalityIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
             if (!searchResponse.IsValid)
             {
@@ -652,18 +577,11 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<DistrictsDto>? searchResponse = await _elasticClient.SearchAsync<DistrictsDto>(s => s
-                .Index(_options.DistrictIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<DistrictsDto> searchResponse = await PerformAdvancedSearch<DistrictsDto>(
+                _options.DistrictIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
             if (!searchResponse.IsValid)
             {
@@ -699,18 +617,11 @@ public class ElasticsearchService : IElasticsearchService
     {
         try
         {
-            ISearchResponse<SubDistrictsDto>? searchResponse = await _elasticClient.SearchAsync<SubDistrictsDto>(s => s
-                .Index(_options.SubDistrictIndexName)
-                .From((page - 1) * pageSize)
-                .Size(pageSize)
-                .Query(q => q
-                    .Match(m => m
-                        .Field(f => f.Name)
-                        .Query(searchTerm)
-                        .Fuzziness(Fuzziness.Auto)
-                    )
-                )
-            );
+            ISearchResponse<SubDistrictsDto> searchResponse = await PerformAdvancedSearch<SubDistrictsDto>(
+                _options.SubDistrictIndexName,
+                searchTerm,
+                page,
+                pageSize);
 
             if (!searchResponse.IsValid)
             {
@@ -742,48 +653,126 @@ public class ElasticsearchService : IElasticsearchService
         }
     }
 
-    // Método genérico auxiliar para criar índices
-    private async Task CreateIndexIfNotExists<T>(string indexName,
-        Func<TypeMappingDescriptor<T>, ITypeMapping> mappingSelector) where T : class
+    #endregion
+
+    #region Common Search Methods
+
+    private async Task<ISearchResponse<T>> PerformAdvancedSearch<T>(string indexName, string searchTerm, int page = 1,
+        int pageSize = 10) where T : class
     {
-        ExistsResponse indexExists = await _elasticClient.Indices.ExistsAsync(indexName);
-        if (!indexExists.Exists)
+        // Preparação do termo de busca
+        searchTerm = NormalizeSearchTerm(searchTerm);
+        IEnumerable<string> tokens = TokenizeSearchTerm(searchTerm);
+
+        ISearchResponse<T>? searchResponse = await _elasticClient.SearchAsync<T>(s => s
+            .Index(indexName)
+            .From((page - 1) * pageSize)
+            .Size(pageSize)
+            .Query(q => BuildAdvancedQuery<T>(searchTerm, tokens))
+            .Sort(ss => ss.Descending(SortSpecialField.Score))
+        );
+
+        // Log para debug
+        _logger.LogDebug("Elasticsearch query: {Query}", searchResponse.DebugInformation);
+
+        return searchResponse;
+    }
+
+    private QueryContainer BuildAdvancedQuery<T>(string searchTerm, IEnumerable<string> tokens) where T : class
+    {
+        // A string "name" refere-se ao nome do campo no índice do Elasticsearch
+        // Todos os nossos DTOs têm uma propriedade Name que é mapeada para o campo "name" no Elasticsearch
+        const string fieldName = "name";
+
+        return new BoolQuery
         {
-            _logger.LogInformation("Criando índice {IndexName}", indexName);
-
-            CreateIndexResponse? createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
-                .Settings(s => s
-                    .NumberOfShards(1)
-                    .NumberOfReplicas(0)
-                    .RefreshInterval("30s")
-                    .Setting("index.max_ngram_diff", 13)
-                    .Analysis(a => a
-                        .Analyzers(aa => aa
-                            .Custom("brazilian", ca => ca
-                                .Tokenizer("standard")
-                                .Filters("lowercase", "brazilian_stemmer", "asciifolding", "ngram_filter")
-                            )
-                        )
-                        .TokenFilters(tf => tf
-                            .Stemmer("brazilian_stemmer", st => st
-                                .Language("brazilian")
-                            )
-                            .NGram("ngram_filter", ng => ng
-                                .MinGram(2)
-                                .MaxGram(10)
-                            )
-                        )
-                    )
-                )
-                .Map(mappingSelector)
-            );
-
-            if (!createIndexResponse.IsValid)
+            Should = new List<QueryContainer>
             {
-                _logger.LogError("Erro ao criar índice {IndexName}: {Error}",
-                    indexName, createIndexResponse.DebugInformation);
-                throw new Exception($"Falha ao criar índice {indexName}: {createIndexResponse.DebugInformation}");
+                // 1. Correspondência exata com maior pontuação
+                new MatchQuery
+                {
+                    Field = fieldName,
+                    Query = searchTerm,
+                    Boost = 10
+                },
+
+                // 2. Correspondência fuzzy para lidar com erros ortográficos
+                new MatchQuery
+                {
+                    Field = fieldName,
+                    Query = searchTerm,
+                    Fuzziness = Fuzziness.EditDistance(2),
+                    Boost = 5
+                },
+
+                // 3. Busca por prefixo para encontrar termos que começam com o padrão
+                new PrefixQuery
+                {
+                    Field = fieldName,
+                    Value = searchTerm.ToLowerInvariant(),
+                    Boost = 3
+                },
+
+                // 4. Busca por cada token individual
+                new BoolQuery
+                {
+                    Should = tokens.Select(token =>
+                        (QueryContainer)new MatchQuery
+                        {
+                            Field = fieldName,
+                            Query = token,
+                            Boost = 2
+                        }
+                    ).ToList(),
+                    Boost = 2
+                },
+
+                // 5. Busca por fragmentos do termo (usando wildcard)
+                new WildcardQuery
+                {
+                    Field = fieldName,
+                    Value = $"*{searchTerm.ToLowerInvariant()}*",
+                    Boost = 1
+                }
+            },
+            MinimumShouldMatch = 1
+        };
+    }
+
+    private string NormalizeSearchTerm(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return searchTerm;
+        }
+
+        // Normalização básica de acentos
+        string normalized = searchTerm.Normalize(NormalizationForm.FormD);
+        StringBuilder sb = new();
+
+        foreach (char c in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                sb.Append(c);
             }
         }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC).Trim().ToLower();
     }
+
+    private IEnumerable<string> TokenizeSearchTerm(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        // Tokenização por espaços e caracteres especiais
+        return Regex.Split(searchTerm, @"[\s\-_.,;:!?]+")
+            .Where(token => !string.IsNullOrWhiteSpace(token))
+            .Select(token => token.Trim().ToLowerInvariant());
+    }
+
+    #endregion
 }

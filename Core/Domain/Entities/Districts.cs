@@ -7,8 +7,8 @@ public class Districts
     public long MunicipalityId { get; set; }
 
     //Relationships
-    public List<SubDistricts> SubDistricts = new List<SubDistricts>();
-    public Municipality Municipality = null!;
+    public List<SubDistricts> SubDistricts { get; set; } = new List<SubDistricts>();
+    public Municipality Municipality { get; set; } = null!;
 
     public Districts() { }
 

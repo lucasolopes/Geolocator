@@ -55,8 +55,6 @@ public static class ServiceConfiguration
             return new ElasticClient(connectionSettings);
         });
 
-        services.AddScoped<IElasticsearchService, ElasticsearchService>();
-
-
+        services.AddTransient<IElasticsearchService, ElasticsearchService>();
     }
 }
