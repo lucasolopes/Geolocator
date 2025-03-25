@@ -301,10 +301,14 @@ public class ElasticsearchService : IElasticsearchService
                         .Analyzers(aa => aa
                             .Custom("brazilian", ca => ca
                                 .Tokenizer("standard")
-                                .Filters("lowercase", "brazilian_stemmer", "asciifolding", "ngram_filter")
+                                .Filters("lowercase", "brazilian_stemmer", "asciifolding", "brazilian_stop_min", "ngram_filter")
                             )
                             .Custom("edge_ngram_analyzer", ca => ca
                                 .Tokenizer("edge_ngram_tokenizer")
+                                .Filters("lowercase", "asciifolding")
+                            )
+                            .Custom("text_without_accents", ca => ca
+                                .Tokenizer("standard")
                                 .Filters("lowercase", "asciifolding")
                             )
                         )
@@ -322,6 +326,12 @@ public class ElasticsearchService : IElasticsearchService
                             .NGram("ngram_filter", ng => ng
                                 .MinGram(2)
                                 .MaxGram(10)
+                            )
+                            .Stop("brazilian_stop_min", s => s
+                                .StopWords("_brazilian_") // Usar stopwords brasileiras
+                                .RemoveTrailing(true)     // Remover espaços no final
+                                .IgnoreCase(true)
+                                .StopWordsPath(null)      // Não usar stopwords personalizadas
                             )
                             .Synonym("synonym_filter", sf => sf
                                 .Synonyms(
@@ -345,6 +355,7 @@ public class ElasticsearchService : IElasticsearchService
                                 .Text(ft => ft.Name("edge").Analyzer("edge_ngram_analyzer"))
                                 .Keyword(k => k.Name("keyword").IgnoreAbove(256))
                                 .Completion(c => c.Name("suggest"))
+                                .Text(ft => ft.Name("normalized").Analyzer("text_without_accents").SearchAnalyzer("text_without_accents"))
                             )
                         )
                     )
@@ -641,6 +652,7 @@ public class ElasticsearchService : IElasticsearchService
             .From((page - 1) * pageSize)
             .Size(pageSize)
             .Query(q => BuildAdvancedQuery<T>(searchTerm, tokens))
+            .MinScore(3.0) // Definir pontuação mínima aqui
             .Sort(ss => ss.Descending(SortSpecialField.Score))
         );
 
@@ -650,58 +662,67 @@ public class ElasticsearchService : IElasticsearchService
     }
 
     private QueryContainer BuildAdvancedQuery<T>(string searchTerm, IEnumerable<string> tokens) where T : class
+{
+    const string fieldName = "name";
+    
+    // Normalizar para busca
+    string normalizedSearchTerm = NormalizeSearchTerm(searchTerm);
+    
+    // Construir query básica com boosting para relevância
+    var baseQuery = new BoolQuery
     {
-        const string fieldName = "name";
-
-        return new BoolQuery
+        Should = new List<QueryContainer>
         {
-            Should = new List<QueryContainer>
+            // Correspondência em campo keyword com wildcard mais restrito
+            // Agora buscamos termos que COMEÇAM com o termo de busca
+            new WildcardQuery
             {
-                new MatchQuery
-                {
-                    Field = fieldName,
-                    Query = searchTerm,
-                    Boost = 10
-                },
-
-                new MatchQuery
-                {
-                    Field = fieldName,
-                    Query = searchTerm,
-                    Fuzziness = Fuzziness.EditDistance(2),
-                    Boost = 5
-                },
-
-                new PrefixQuery
-                {
-                    Field = fieldName,
-                    Value = searchTerm.ToLowerInvariant(),
-                    Boost = 3
-                },
-
-                new BoolQuery
-                {
-                    Should = tokens.Select(token =>
-                        (QueryContainer)new MatchQuery
-                        {
-                            Field = fieldName,
-                            Query = token,
-                            Boost = 2
-                        }
-                    ).ToList(),
-                    Boost = 2
-                },
-
-                new WildcardQuery
-                {
-                    Field = fieldName,
-                    Value = $"*{searchTerm.ToLowerInvariant()}*",
-                    Boost = 1
-                }
+                Field = $"{fieldName}.keyword",
+                Value = $"{normalizedSearchTerm}*",  // Mudado de *{term}* para {term}*
+                Boost = 20
             },
-            MinimumShouldMatch = 1
-        };
-    }
+            
+            // Correspondência exata com prefixo
+            new PrefixQuery
+            {
+                Field = fieldName,
+                Value = searchTerm,
+                Boost = 15
+            },
+            
+            // Correspondência por termo completo - alta prioridade
+            new MatchQuery
+            {
+                Field = fieldName,
+                Query = searchTerm,
+                Fuzziness = Fuzziness.EditDistance(1),
+                Operator = Operator.And,  // Mudado de OR para AND
+                MinimumShouldMatch = "80%",  // Aumentado de 60% para 80%
+                Boost = 10
+            },
+            
+            // Edge N-gram para prefixos - média prioridade
+            new MatchQuery
+            {
+                Field = $"{fieldName}.edge",
+                Query = searchTerm,
+                Boost = 8
+            },
+            
+            // Match no campo normalizado sem acentos
+            new MatchQuery
+            {
+                Field = $"{fieldName}.normalized",
+                Query = normalizedSearchTerm,
+                Boost = 7
+            }
+        },
+        MinimumShouldMatch = 1
+    };
+    
+    // Aumentar a pontuação mínima para filtrar resultados menos relevantes
+    return baseQuery;
+}
 
     private string NormalizeSearchTerm(string searchTerm)
     {
@@ -710,18 +731,27 @@ public class ElasticsearchService : IElasticsearchService
             return searchTerm;
         }
 
-        string normalized = searchTerm.Normalize(NormalizationForm.FormD);
-        StringBuilder sb = new();
-
-        foreach (char c in normalized)
+        // Normalização específica para português brasileiro
+        searchTerm = searchTerm.Normalize(NormalizationForm.FormD);
+        
+        // Substituir acentuações comuns
+        var replacements = new Dictionary<string, string>
         {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            {
-                sb.Append(c);
-            }
+            { "ã", "a" }, { "á", "a" }, { "à", "a" }, { "â", "a" },
+            { "é", "e" }, { "ê", "e" }, { "è", "e" },
+            { "í", "i" }, { "ì", "i" }, { "î", "i" },
+            { "õ", "o" }, { "ó", "o" }, { "ò", "o" }, { "ô", "o" },
+            { "ú", "u" }, { "ù", "u" }, { "û", "u" },
+            { "ç", "c" }
+        };
+        
+        foreach (KeyValuePair<string, string> pair in replacements)
+        {
+            searchTerm = searchTerm.Replace(pair.Key, pair.Value);
         }
 
-        return sb.ToString().Normalize(NormalizationForm.FormC).Trim().ToLower();
+        // Remover caracteres especiais
+        return Regex.Replace(searchTerm, @"[^\w\s]", "").Trim().ToLower();
     }
 
     private IEnumerable<string> TokenizeSearchTerm(string searchTerm)

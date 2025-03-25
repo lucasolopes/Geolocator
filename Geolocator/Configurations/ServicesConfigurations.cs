@@ -49,8 +49,12 @@ public static class ServiceConfiguration
                 .DefaultMappingFor<MunicipalityDto>(m => m.IndexName(options.MunicipalityIndexName))
                 .DefaultMappingFor<DistrictsDto>(m => m.IndexName(options.DistrictIndexName))
                 .DefaultMappingFor<SubDistrictsDto>(m => m.IndexName(options.SubDistrictIndexName))
+                .DisableDirectStreaming() // Facilita a depuração
                 .EnableDebugMode()
-                .PrettyJson();
+                .PrettyJson()
+                .RequestTimeout(TimeSpan.FromMinutes(2)) // Aumentar timeout
+                .MaximumRetries(5) // Adicionar retries
+                .MaxRetryTimeout(TimeSpan.FromMinutes(5));
 
             return new ElasticClient(connectionSettings);
         });

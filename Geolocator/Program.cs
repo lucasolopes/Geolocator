@@ -51,18 +51,19 @@ app.MapControllers();
 
 using (IServiceScope scope = app.Services.CreateScope())
 {
+    IServiceProvider services = scope.ServiceProvider;
+    ILogger<Program> logger = services.GetRequiredService<ILogger<Program>>();
+    
     try
     {
-        GeolocatorDbContext db = scope.ServiceProvider.GetRequiredService<GeolocatorDbContext>();
-        await db.Database.MigrateAsync();
-
-        IElasticsearchService elasticService = scope.ServiceProvider.GetRequiredService<IElasticsearchService>();
-        await elasticService.CreateIndicesIfNotExistAsync();
+        logger.LogInformation("Tentando aplicar migrações ao banco de dados...");
+        GeolocatorDbContext context = services.GetRequiredService<GeolocatorDbContext>();
+        context.Database.Migrate();
+        logger.LogInformation("Migrações aplicadas com sucesso!");
     }
     catch (Exception ex)
     {
-        ILogger<Program> logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Ocorreu um erro durante a inicialização da aplicação");
+        logger.LogError(ex, "Ocorreu um erro durante a aplicação das migrações");
     }
 }
 
